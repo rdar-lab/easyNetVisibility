@@ -61,8 +61,12 @@ def run():
     server_url = config.get('ServerAPI', 'serverURL')
     server_username = config.get('ServerAPI', 'serverUsername')
     server_password = config.get('ServerAPI', 'serverPassword')
+    validate_server_identity_param = config.get('ServerAPI', 'validateServerIdentity')
+    validate_server_identity = True
+    if validate_server_identity_param == 'False':
+        validate_server_identity = False
 
-    server_api.init(server_url, server_username, server_password)
+    server_api.init(server_url, server_username, server_password, validate_server_identity)
 
     interface = config.get('General', 'interface')
     network_utils.init(interface)

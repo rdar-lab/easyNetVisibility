@@ -15,10 +15,18 @@ RUN pip install MySQL-connector-python
 copy ./webapp /var/www/webapp
 COPY FlaskApp.conf /etc/apache2/sites-available/FlaskApp.conf
 COPY settings.cfg /conf/settings.cfg
+
+RUN mkdir /keys
+RUN openssl genrsa -out /keys/server.key 2048
+RUN openssl req -new -key /keys/server.key -out /keys/request.csr -batch
+RUN openssl x509 -req -in /keys/request.csr -signkey /keys/server.key -out /keys/server.cert
+RUN cp /etc/apache2/mods-available/ssl.load /etc/apache2/mods-enabled/ssl.load
+
 RUN a2ensite FlaskApp
 RUN service apache2 restart
 RUN rm -rf /etc/apache2/sites-available/000-default.conf
 RUN rm -rf /etc/apache2/sites-enabled/000-default.conf
+
 EXPOSE 80
 EXPOSE 443
 ENTRYPOINT export APP_CONFIG=/conf/settings.cfg && /usr/sbin/apache2ctl -D BACKGROUND && tail -f /var/log/apache2/*
