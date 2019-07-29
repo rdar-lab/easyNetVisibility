@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section>
+
+    {% if deviceList|length == 0 %}
+    <div class="container">
+        <div class="jumbotron">
+            <h1>Welcome to Easy Net Visibility</h1>
+            <p>There have been no devices discovered yet. Head over to <a href="/status">status tab</a> to make sure
+                everything is running properly. </p>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if deviceList|length > 0 %}
+
+    <br/>
+
+    <table class="container">
+        <thead>
+        <tr class="row" style="border-bottom: 2px solid #000;">
+            <TH class="col-xs-1" nowrap><b>Name</b></TH>
+            <TH class="col-xs-1" nowrap><b>IP</b></TH>
+            <TH class="col-xs-1" nowrap><b>MAC</b></TH>
+            <TH class="col-xs-1" nowrap><b>Vendor</b></TH>
+            <TH class="col-xs-1" nowrap><b>First Seen</b></TH>
+            <TH class="col-xs-1" nowrap><b>Last Seen</b></TH>
+            <TH class="col-xs-1" nowrap><b>Open Ports</b></TH>
+            <TH class="col-xs-1" nowrap></TH>
+        </tr>
+        </thead>
+        <tbody>
+        {% for device in deviceList %}
+
+        <tr class="row" style="border-bottom: 1px solid #ccc;">
+            <td class="col-xs-1" nowrap>{{device['nickname']|safe}}&nbsp;&nbsp;<span data-toggle="modal"
+                                                                                     data-target="#renameDevice{{loop.index}}"
+                                                                                     style="cursor: pointer;"><span
+                    class="glyphicon glyphicon-edit"></span></span></td>
+            <td class="col-xs-1" nowrap>{{device['ip']|safe}}</td>
+            <td class="col-xs-1" nowrap>{{device['mac']|safe}}</td>
+            <td class="col-xs-1" nowrap>{{device['vendor']|safe}}</td>
+            <td class="col-xs-1 w3-{% if device['first_seen_today'] %}red{% else %}white{% endif %}" nowrap>
+                {{device['first_seen']|safe}}
+            </td>
+            <td class="col-xs-1 w3-{% if device['online'] %}white{% else %}red{% endif %}" nowrap>
+                {{device['last_seen']|safe}}
+            </td>
+            <td class="col-xs-1" nowrap>{{device['open_ports']}}</td>
+            <td class="col-xs-1" nowrap>
+                <button class="w3-btn-block w3-dark-grey" onclick="location.href='/device/{{device['device_id']}}'">More
+                    Info...
+                </button>
+            </td>
+        </tr>
+
+
+        <div id="renameDevice{{loop.index}}" class="modal fade" role="dialog">
+            <div class="modal-dialog">
+                <!-- Modal content-->
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                        <h4 class="modal-title">Rename Device</h4>
+                    </div>
+                    <div class="modal-body">
+                        <p>Hostname: {{device['hostname']|safe}}</p>
+                        <p>Previous Name: {{device['nickname']|safe}}</p>
+                        <p>
+                        <form id="{{loop.index}}" action="/renameDevice" method="post">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <input name="device_id" type=hidden value="{{device['device_id']}}">
+                            <input class="form-control" id="nickname" name="nickname" type="text"
+                                   placeholder="New Name">
+                        </form>
+                        </p>
+                    </div>
+                    <div class="modal-footer">
+                        <div class="row">
+                            <div class="col-xs-4">
+                                <button form="{{loop.index}}" type="submit" class="btn btn-default center-block">Save
+                                </button>
+                            </div>
+                            <div class="col-xs-4">
+                            </div>
+                            <div class="col-xs-4">
+                                <button type="button" class="btn btn-default center-block" data-dismiss="modal">Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+        </tbody>
+    </table>
+    <br/>
+    <br/>
+    <div>
+        <center>
+            total: {{ deviceList|length }} devices
+        </center>
+    </div>
+
+    {% endif %}
+
+</section>
+
+
+{% endblock %}
+
+
