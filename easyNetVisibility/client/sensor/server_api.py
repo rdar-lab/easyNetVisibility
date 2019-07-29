@@ -16,9 +16,12 @@ def init(param_server_api_address, param_server_username, param_server_password,
     global validate_server_identity
 
     server_api_address = param_server_api_address
-    if server_username is not None and len(server_username) > 0:
+    if param_server_username is not None and len(param_server_username) > 0:
+        logger.info("Server authentication enabled")
         server_username = param_server_username
         server_password = param_server_password
+    else:
+        logger.info("Server authentication disabled")
 
     validate_server_identity = param_validate_server_identity
     logger.info("Server connection set for server:" + server_api_address)

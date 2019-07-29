@@ -38,7 +38,7 @@ def add_device():
             db.add_device(new_device_data)
 
             email_body = render_template('emails/addDevice.html', deviceInfo=new_device_data,
-                                         serverUrl=app.config['UI_SERVER_URL'])
+                                         serverUrl=app.config['SERVER_URL'])
             email.email_user("New Device Detected", email_body)
             return jsonify(status="Success", reason="Device added")
         except Exception as e:
