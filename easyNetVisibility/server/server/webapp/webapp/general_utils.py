@@ -33,7 +33,7 @@ def translate_device_info(host, get_ports):
     open_ports = host['open_ports']
 
 
-    if get_ports == True
+    if get_ports == True:
         ports = db.find_ports_of_device(device_id)
         open_ports = len(ports)
 
