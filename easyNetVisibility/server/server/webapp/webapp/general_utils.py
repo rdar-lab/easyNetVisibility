@@ -29,24 +29,24 @@ def translate_device_info(host, get_ports):
     first_seen_today = first_seen.date() == now.date()
     last_seen = host['last_seen']
     online = last_seen + datetime.timedelta(minutes=60) > now
-	port_list = []
-	open_ports = host['open_ports']
+    port_list = []
+    open_ports = host['open_ports']
 
 
-	if get_ports == True
-		ports = db.find_ports_of_device(device_id)
-		open_ports = len(ports)
+    if get_ports == True
+        ports = db.find_ports_of_device(device_id)
+        open_ports = len(ports)
 
-		for port in ports:
-			port_info_tmp = {'first_seen': port['first_seen'].strftime('%Y-%m-%d %H:%M:%S'),
-							 'last_seen': port['last_seen'].strftime('%Y-%m-%d %H:%M:%S'),
-							 'protocol': port['protocol'],
-							 'name': port['name'],
-							 'product': port['product'],
-							 'version': port['version'],
-							 'port': int(port['port_num'])}
-			port_list.append(port_info_tmp)
-			port_list = sorted(port_list, key=lambda k: k['port'])
+        for port in ports:
+            port_info_tmp = {'first_seen': port['first_seen'].strftime('%Y-%m-%d %H:%M:%S'),
+                            'last_seen': port['last_seen'].strftime('%Y-%m-%d %H:%M:%S'),
+                            'protocol': port['protocol'],
+                            'name': port['name'],
+                            'product': port['product'],
+                            'version': port['version'],
+                            'port': int(port['port_num'])}
+            port_list.append(port_info_tmp)
+            port_list = sorted(port_list, key=lambda k: k['port'])
 
     device_info = {'hostname': host['hostname'],
                    'nickname': host['nickname'],
@@ -58,8 +58,8 @@ def translate_device_info(host, get_ports):
                    'last_seen': last_seen.strftime('%Y-%m-%d %H:%M:%S'),
                    'online': online,
                    'device_id': host['device_id'],
-				   'open_ports': open_ports,
-				   'port_list': port_list
+                   'open_ports': open_ports,
+                   'port_list': port_list
                    }
 
     return device_info
