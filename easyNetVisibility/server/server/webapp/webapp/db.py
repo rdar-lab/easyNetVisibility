@@ -83,7 +83,7 @@ def update(sql, data):
 
 
 def find_all_devices():
-    return select("select * from devices, (select device_id, count(*) as open_ports from ports group by device_id ) as device_ports where devices.device_id = device_ports.device_id")
+    return select("select devices.*, coalesce(device_ports.open_ports,0) as open_ports from devices left join (select device_id, count(*) as open_ports from ports group by device_id ) as device_ports on devices.device_id = device_ports.device_id")
 
 
 def find_all_sensors():
