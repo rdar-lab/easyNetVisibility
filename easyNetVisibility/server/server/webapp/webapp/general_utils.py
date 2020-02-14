@@ -30,7 +30,7 @@ def translate_device_info(host, get_ports):
     last_seen = host['last_seen']
     online = last_seen + datetime.timedelta(minutes=60) > now
     port_list = []
-    open_ports = host['open_ports']
+    open_ports = host.get('open_ports')
 
 
     if get_ports == True:
