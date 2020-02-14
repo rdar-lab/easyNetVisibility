@@ -16,21 +16,38 @@ def read_all_devices():
     all_devices = db.find_all_devices()
     if all_devices is not None:
         for host in all_devices:
-            device_info = translate_device_info(host)
+            device_info = translate_device_info(host, False)
             device_list.append(device_info)
     device_list.sort(key=lambda device: split_ip(device['ip'])[3], reverse=False)
     return device_list
 
 
-def translate_device_info(host):
+def translate_device_info(host, get_ports):
     device_id = host['device_id']
     now = datetime.datetime.now()
     first_seen = host['first_seen']
     first_seen_today = first_seen.date() == now.date()
     last_seen = host['last_seen']
     online = last_seen + datetime.timedelta(minutes=60) > now
-    ports = db.find_ports_of_device(device_id)
-    port_count = len(ports)
+	port_list = []
+	open_ports = host['open_ports']
+
+
+	if get_ports == True
+		ports = db.find_ports_of_device(device_id)
+		open_ports = len(ports)
+
+		for port in ports:
+			port_info_tmp = {'first_seen': port['first_seen'].strftime('%Y-%m-%d %H:%M:%S'),
+							 'last_seen': port['last_seen'].strftime('%Y-%m-%d %H:%M:%S'),
+							 'protocol': port['protocol'],
+							 'name': port['name'],
+							 'product': port['product'],
+							 'version': port['version'],
+							 'port': int(port['port_num'])}
+			port_list.append(port_info_tmp)
+			port_list = sorted(port_list, key=lambda k: k['port'])
+
     device_info = {'hostname': host['hostname'],
                    'nickname': host['nickname'],
                    'ip': host['ip'],
@@ -40,23 +57,11 @@ def translate_device_info(host):
                    'first_seen_today': first_seen_today,
                    'last_seen': last_seen.strftime('%Y-%m-%d %H:%M:%S'),
                    'online': online,
-                   'open_ports': port_count,
-                   'device_id': host['device_id']
+                   'device_id': host['device_id'],
+				   'open_ports': open_ports,
+				   'port_list': port_list
                    }
 
-    port_list = []
-    for port in ports:
-        port_info_tmp = {'first_seen': port['first_seen'].strftime('%Y-%m-%d %H:%M:%S'),
-                         'last_seen': port['last_seen'].strftime('%Y-%m-%d %H:%M:%S'),
-                         'protocol': port['protocol'],
-                         'name': port['name'],
-                         'product': port['product'],
-                         'version': port['version'],
-                         'port': int(port['port_num'])}
-        port_list.append(port_info_tmp)
-        port_list = sorted(port_list, key=lambda k: k['port'])
-
-    device_info['port_list'] = port_list
     return device_info
 
 

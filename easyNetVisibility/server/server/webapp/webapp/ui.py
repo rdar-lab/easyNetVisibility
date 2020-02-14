@@ -91,7 +91,7 @@ def get_device_info(device_id):
         return redirect('/')
     else:
         host = existing_devices[0]
-        device_info = general_utils.translate_device_info(host)
+        device_info = general_utils.translate_device_info(host, True)
 
         return render_template('device.html', deviceInfo=device_info)
 

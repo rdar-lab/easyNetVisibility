@@ -1,0 +1,46 @@
+# Server (on swarm)
+docker swarm init
+docker network create -d overlay my-overlay
+docker service create --network my-overlay --name db -e MYSQL_ROOT_PASSWORD=1234 --mount type=bind,source=/home/chronos/conf/password.sql,destination=/docker-entrypoint-initdb.d/password.sql rdxmaster/easy-net-visibility-db
+docker service create --network my-overlay --name server --mount type=bind,source=/home/chronos/conf,destination=/conf -p 443:443 rdxmaster/easy-net-visibility-server
+
+
+# Server standalone (DB on aother location)
+docker run --restart=always -d --name server -v /home/chronos/conf:/conf -p 443:443 rdxmaster/easy-net-visibility-server
+
+Make sure to create the conf diretory:
+1. Edit the settings.conf file
+2. Generate default self-signed key:
+openssl genrsa -out /conf/private_key.pem 2048
+openssl req -new -key /conf/private_key.pem -out /conf/request.csr -batch
+openssl x509 -req -in /conf/request.csr -signkey /conf/private_key.pem -out /conf/cert.pem
+cp /conf/cert.pem /conf/ca_chain.pem
+
+
+To obtain a certificate from let's encrypt:
+sudo docker run -it --rm --name certbot \
+            -v "/home/chronos/conf:/etc/letsencrypt" \
+            -v "/var/lib/letsencrypt:/var/lib/letsencrypt" \
+			-p 80:80 \
+            certbot/certbot certonly
+			
+** Make sure to create soft links to the right files
+			
+
+For renewal:
+sudo docker run -it --rm --name certbot \
+            -v "/home/chronos/conf:/etc/letsencrypt" \
+            -v "/var/lib/letsencrypt:/var/lib/letsencrypt" \
+			-p 80:80 \
+            certbot/certbot renew
+
+To add a cert schedule use crontab and launch it:
+docker run -d --restart=always -v /var/run/docker.sock:/var/run/docker.sock  --privileged --name  cert-schedule  cert-schedule
+
+
+3. Generate a password file:
+htpasswd -c /conf/passwd [USER_NAME]
+
+
+#Sensor
+docker run -d --restart=always --network host --name sensor -d -v /opt/easynetvisibility:/opt/sensor/config  rdxmaster/easy-net-visibility-sensor
