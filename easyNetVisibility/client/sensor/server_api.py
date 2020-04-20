@@ -75,9 +75,5 @@ def add_port(port_info):
     return post('/api/addPort', port_info)
 
 
-def get_config():
-    return get('/api/getConfig')
-
-
 def report_sensor_health(health_info):
     return post('/api/sensorHealth', health_info)
