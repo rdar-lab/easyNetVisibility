@@ -203,7 +203,7 @@ def sensor_health(request):
     else:
         try:
             sensor = sensors[0]
-            sensor.hostname = sensor_info['hostname']
+            sensor.hostname = sensor_info.hostname
             sensor.last_seen = datetime.datetime.now()
             sensor.save()
         except Exception as e:
