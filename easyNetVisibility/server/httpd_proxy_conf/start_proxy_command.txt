@@ -1,0 +1,9 @@
+docker run \
+	-it --rm \
+	-p 443:443 \
+	--volume="/opt/httpd/httpd.conf:/usr/local/apache2/conf/httpd.conf:ro" \
+	--volume="/opt/httpd/httpd-ssl.conf:/usr/local/apache2/conf/httpd-ssl.conf:ro" \
+	--volume="/opt/httpd/cert.pem:/usr/local/apache2/conf/server.crt:ro" \
+	--volume="/opt/httpd/private_key.pem:/usr/local/apache2/conf/server.key:ro" \
+	--name httpd \
+	httpd:2.4
