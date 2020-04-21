@@ -21,7 +21,7 @@ class Device(models.Model):
             return self.hostname
 
     def first_seen_today(self):
-        return self.last_seen >= timezone.now() - datetime.timedelta(days=1)
+        return self.first_seen >= timezone.now() - datetime.timedelta(days=1)
 
     def online(self):
         return self.last_seen >= timezone.now() - datetime.timedelta(hours=6)
