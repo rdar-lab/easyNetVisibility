@@ -24,7 +24,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = 'gco1+8te0z(%3c=oy^2iptpni6i@zw-^r(ngxu%nqmi+^bxij3'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
@@ -77,7 +77,7 @@ WSGI_APPLICATION = 'easy_net_visibility.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'NAME': os.path.join(BASE_DIR, 'db/db.sqlite3'),
     }
 }
 
@@ -125,9 +125,7 @@ REST_FRAMEWORK = {
     )
 }
 
-STATIC_ROOT = os.path.join(BASE_DIR, "static")
-
-
-overrides = json.loads(open('settings-override.json').read())
-globals().update(overrides)
-
+if os.environ.get('PRODUCTION') == "1":
+    # print('Production setting detected. Loading config/settings.json file')
+    overrides = json.loads(open('config/settings.json').read())
+    globals().update(overrides)

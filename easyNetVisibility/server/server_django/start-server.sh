@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
+export PRODUCTION=1
 
-(cd easy_net_visibility; sudo -u www-data python manage.py migrate)
+(cd easy_net_visibility; sudo -E -u www-data python manage.py collectstatic --no-input)
+(cd easy_net_visibility; sudo -E -u www-data python manage.py migrate)
 
 if [ -n "$DJANGO_SUPERUSER_USERNAME" ] && [ -n "$DJANGO_SUPERUSER_PASSWORD" ] ; then
     (cd easy_net_visibility; python manage.py createsuperuser --no-input)

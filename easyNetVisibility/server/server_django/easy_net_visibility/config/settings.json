@@ -1,0 +1,12 @@
+{
+  "DATABASES": {
+    "default": {
+      "ENGINE": "django.db.backends.sqlite3",
+      "NAME": "db/db.sqlite3"
+    }
+  },
+  "SECRET_KEY": "69Lk%&Xs@jd*N5UfYvSGFDzUud8A!0*E*pKVT0x6eI#l49O%!I4ZrGiFTZ$Gi3va9a6uLTNUv$qb9Kx%vDIU2E&P3XHadHGsja5tInr&BevD8aRsh$JGqXTh&K23rx$E",
+  "DEBUG": "False",
+  "STATIC_ROOT": "static"
+}
+
