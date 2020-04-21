@@ -12,6 +12,7 @@ RUN ln -sf /dev/stdout /var/log/nginx/access.log \
 RUN mkdir -p /opt/app
 RUN mkdir -p /opt/app/easy_net_visibility
 COPY requirements.txt start-server.sh /opt/app/
+RUN chmod +x /opt/app/start-server.sh
 COPY easy_net_visibility /opt/app/easy_net_visibility/
 RUN pip install -r /opt/app/requirements.txt
 RUN chown -R www-data:www-data /opt/app

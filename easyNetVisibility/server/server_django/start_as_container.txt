@@ -1,0 +1,9 @@
+docker run -it --rm \
+    -p 8000:8000 \
+    --volume="/opt/easy_net_visibility/conf:/opt/app/easy_net_visibility/conf:ro" \
+    --volume="/opt/easy_net_visibility/db:/opt/app/easy_net_visibility/db:rw" \
+     -e DJANGO_SUPERUSER_USERNAME=[ADMIN_USER] \
+     -e DJANGO_SUPERUSER_PASSWORD=[SECRET_PASSWORD] \
+     -e DJANGO_SUPERUSER_EMAIL=[ADMIN_EMAIL] \
+    --name=server \
+    [SELECTED_TAG_NAME]
