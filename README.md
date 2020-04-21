@@ -13,6 +13,12 @@ Both components are now containerized so it can be easily be deployed.
 The sensor will use `nmap` to scan for devices on the network and to identify the open ports on each device.
 The server component is based on `Django` and can be configured to use an external or internal DB.
 
+This was originally based on the open-source SweedSecurity project. Here is a list of some of the changes:
+1. Removed any component of IDS system
+2. Implmenented on containers
+3. Server Implemented on Django
+4. Better UI for large number of devices
+
 ## Installation:
 
 ### For the server –
@@ -25,7 +31,7 @@ To deploy it:
 4.	Run using the following command:
 
 ```
-docker run -d --restart=always –name=server \
+docker run -d --restart=always  \
     -p 8000:8000 \
     --volume="/opt/easy_net_visibility/conf:/opt/app/easy_net_visibility/conf:ro" \
     --volume="/opt/easy_net_visibility/db:/opt/app/easy_net_visibility/db:rw" \
