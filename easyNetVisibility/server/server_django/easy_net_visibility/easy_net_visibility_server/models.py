@@ -9,7 +9,7 @@ class Device(models.Model):
     nickname = models.CharField(max_length=255, blank=True, null=True)
     hostname = models.CharField(max_length=255, blank=True, null=True)
     ip = models.CharField(max_length=255)
-    mac = models.CharField(max_length=255)
+    mac = models.CharField(max_length=255, db_index=True)
     vendor = models.CharField(max_length=255, blank=True, null=True)
     first_seen = models.DateTimeField('first_seen')
     last_seen = models.DateTimeField('last_seen')
@@ -62,7 +62,7 @@ class Port(models.Model):
 
 class Sensor(models.Model):
     id = models.AutoField(primary_key=True, db_column='sensor_id')
-    mac = models.CharField(max_length=255)
+    mac = models.CharField(max_length=255, db_index=True)
     hostname = models.CharField(max_length=255, blank=True, null=True)
     first_seen = models.DateTimeField('first_seen')
     last_seen = models.DateTimeField('last_seen')
