@@ -10,6 +10,9 @@ from rest_framework.response import Response
 from . import validators
 from .models import Device, Port, Sensor
 
+# If a device was seen within this threshold, don't update last_seen again
+# This is disabled because it didn't effect the performance in a meaningful way
+_LAST_SEEN_THRESHOLD_MINUTES = 0
 
 def read_device_details_from_request_body(request):
     # Use request.data for DRF, fallback to request.POST
@@ -66,16 +69,23 @@ def add_device(request):
     else:
         # device already exists
         existing_device = existing_devices[0]
-        existing_device.hostname = hostname
-        existing_device.ip = ip
-        existing_device.last_seen = datetime.datetime.now()
+        now = datetime.datetime.now()
 
-        try:
-            existing_device.save()
-            return return_success("Device updated")
-        except Exception as e:
-            traceback.print_exc()
-            return return_error('Error updating device:' + str(e))
+        if (existing_device.hostname == hostname and
+                existing_device.ip == ip and
+                existing_device.last_seen is not None and
+                existing_device.last_seen > now - datetime.timedelta(minutes=_LAST_SEEN_THRESHOLD_MINUTES)):
+            return return_success("No update needed")
+        else:
+            try:
+                existing_device.hostname = hostname
+                existing_device.ip = ip
+                existing_device.last_seen = datetime.datetime.now()
+                existing_device.save()
+                return return_success("Device updated")
+            except Exception as e:
+                traceback.print_exc()
+                return return_error('Error updating device:' + str(e))
 
 
 @api_view(['POST'])
@@ -126,21 +136,26 @@ def add_port(request):
     if len(existing_ports) == 0:
         try:
             port_data.save()
+            return return_success('port added')
         except Exception as e:
             traceback.print_exc()
             return return_error('Error :' + str(e))
-
     else:
         existing_port = existing_ports[0]
         # TODO: only last seen is updated, should other information be updated as well?
-        existing_port.last_seen = datetime.datetime.now()
-        try:
-            existing_port.save()
-        except Exception as e:
-            traceback.print_exc()
-            return return_error('Error :' + str(e))
+        now = datetime.datetime.now()
 
-    return return_success('port information updated')
+        if (existing_port.last_seen is not None and
+                existing_port.last_seen > now - datetime.timedelta(minutes=_LAST_SEEN_THRESHOLD_MINUTES)):
+            return return_success('no update needed')
+        else:
+            try:
+                existing_port.last_seen = datetime.datetime.now()
+                existing_port.save()
+                return return_success('port information updated')
+            except Exception as e:
+                traceback.print_exc()
+                return return_error('Error :' + str(e))
 
 
 @api_view(['POST'])
