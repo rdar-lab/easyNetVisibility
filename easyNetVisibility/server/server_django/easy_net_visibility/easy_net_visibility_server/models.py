@@ -9,7 +9,7 @@ class Device(models.Model):
     nickname = models.CharField(max_length=255, blank=True, null=True)
     hostname = models.CharField(max_length=255, blank=True, null=True)
     ip = models.CharField(max_length=255)
-    mac = models.CharField(max_length=255, db_index=True)
+    mac = models.CharField(max_length=255, db_index=True, unique=True)
     vendor = models.CharField(max_length=255, blank=True, null=True)
     first_seen = models.DateTimeField('first_seen')
     last_seen = models.DateTimeField('last_seen')
@@ -41,8 +41,8 @@ class Device(models.Model):
 
 class Port(models.Model):
     id = models.AutoField(primary_key=True, db_column='port_id')
-    device = models.ForeignKey(Device, on_delete=models.CASCADE)
-    port_num = models.IntegerField()
+    device = models.ForeignKey(Device, on_delete=models.CASCADE, db_index=True)
+    port_num = models.IntegerField(db_index=True)
     protocol = models.CharField(max_length=255, blank=True, null=True)
     name = models.CharField(max_length=255, blank=True, null=True)
     product = models.CharField(max_length=255, blank=True, null=True)
@@ -58,11 +58,12 @@ class Port(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['device','port_num'], name='nk_port')
         ]
+        unique_together = (('device', 'port_num'),)
 
 
 class Sensor(models.Model):
     id = models.AutoField(primary_key=True, db_column='sensor_id')
-    mac = models.CharField(max_length=255, db_index=True)
+    mac = models.CharField(max_length=255, db_index=True, unique=True)
     hostname = models.CharField(max_length=255, blank=True, null=True)
     first_seen = models.DateTimeField('first_seen')
     last_seen = models.DateTimeField('last_seen')
