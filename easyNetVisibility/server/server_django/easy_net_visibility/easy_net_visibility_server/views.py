@@ -8,7 +8,8 @@ from django.contrib.messages import add_message, constants
 @login_required
 def home(request):
     devices_list = Device.objects.prefetch_related('port_set').order_by('ip')
-    return render(request, 'home.html', {'deviceList': devices_list})
+    visible_devices = [device for device in devices_list if not device.is_hidden()]
+    return render(request, 'home.html', {'deviceList': visible_devices})
 
 
 @login_required

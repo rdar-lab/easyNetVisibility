@@ -14,6 +14,9 @@ class Device(models.Model):
     first_seen = models.DateTimeField('first_seen')
     last_seen = models.DateTimeField('last_seen')
 
+    def is_hidden(self):
+        return self.nickname is None and not self.online()
+
     def name(self):
         if self.nickname is not None:
             return self.nickname
