@@ -1,10 +1,14 @@
+import datetime
+from abc import ABC
+
+from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
-from .models import Device, Port
 from rest_framework.test import APIClient
-import datetime
-from django.contrib.auth.models import User
+
+from .models import Device, Port
+
 
 class TestDeviceModel(TestCase):
     def setUp(self):
@@ -34,6 +38,7 @@ class TestDeviceModel(TestCase):
         self.assertIn('TestDevice', str(self.device))
         self.assertIn('192.168.1.2', str(self.device))
 
+
 class TestPortModel(TestCase):
     def setUp(self):
         self.device = Device.objects.create(
@@ -60,6 +65,7 @@ class TestPortModel(TestCase):
         self.assertEqual(self.port.port_num, 80)
         self.assertEqual(self.port.device.mac, 'AA:BB:CC:DD:EE:11')
 
+
 class TestDeviceView(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='testuser', password='testpass')
@@ -76,8 +82,11 @@ class TestDeviceView(TestCase):
 
     def test_home_view(self):
         response = self.client.get(reverse('home'))
+        response_content = response.content.decode()
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'ViewDevice')
+        self.assertIn('ViewDevice', response_content)
+        self.assertIn('10.0.0.1', response_content)  # Check if IP is displayed
+        self.assertIn('AA:BB:CC:DD:EE:22', response_content)  # Check if MAC is displayed
 
     def test_rename_device(self):
         response = self.client.post(reverse('rename_device'), {
@@ -86,12 +95,16 @@ class TestDeviceView(TestCase):
         })
         self.device.refresh_from_db()
         self.assertEqual(self.device.nickname, 'RenamedDevice')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Device updated successfully')
 
     def test_delete_device(self):
         response = self.client.post(reverse('delete_device'), {
             'device_id': self.device.id
         })
         self.assertFalse(Device.objects.filter(id=self.device.id).exists())
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Device deleted successfully')
 
     def test_delete_device_deletes_ports(self):
         from .models import Device, Port
@@ -188,12 +201,15 @@ class TestDeviceView(TestCase):
         # The response should contain the capitalized warning message
         self.assertContains(response, f"Device matching query does not exist")
 
-class TestDeviceApi(TestCase):
+
+class BaseDeviceApiTest(ABC, TestCase):
+    def api_post(self, url_name, data, extra=None):
+        self.skipTest("Abstract method not implemented")
+
     def setUp(self):
         self.user = User.objects.create_user(username='apiuser', password='apipass')
         self.client = APIClient()
         self.client.login(username='apiuser', password='apipass')
-        # Get CSRF token for API requests
         response = self.client.get(reverse('get_csrf_token'))
         self.csrf_token = response.content.decode()
         self.client.cookies['csrftoken'] = self.csrf_token
@@ -204,113 +220,83 @@ class TestDeviceApi(TestCase):
         self.assertTrue(response.content)
 
     def test_add_device_missing_mac(self):
-        response = self.client.post(
-            reverse('add_device'),
-            {
-                'hostname': 'apiHost',
-                'ip': '10.0.0.2',
-                'vendor': 'ApiVendor',
-                'mac': ''
-            },
-            HTTP_X_CSRFTOKEN=self.csrf_token
-        )
+        payload = {
+            'hostname': 'apiHost',
+            'ip': '10.0.0.2',
+            'vendor': 'ApiVendor',
+            'mac': ''
+        }
+        response = self.api_post('add_device', payload)
         self.assertEqual(response.status_code, 400)
         self.assertIn(b'Must Supply MAC Address', response.content)
 
     def test_add_device_invalid_mac(self):
-        response = self.client.post(
-            reverse('add_device'),
-            {
-                'hostname': 'apiHost',
-                'ip': '10.0.0.2',
-                'vendor': 'ApiVendor',
-                'mac': 'INVALIDMAC'
-            },
-            HTTP_X_CSRFTOKEN=self.csrf_token
-        )
+        payload = {
+            'hostname': 'apiHost',
+            'ip': '10.0.0.2',
+            'vendor': 'ApiVendor',
+            'mac': 'INVALIDMAC'
+        }
+        response = self.api_post('add_device', payload)
         self.assertEqual(response.status_code, 400)
         self.assertIn(b'Invalid MAC Address', response.content)
 
     def test_add_device_invalid_ip(self):
-        response = self.client.post(
-            reverse('add_device'),
-            {
-                'hostname': 'apiHost',
-                'ip': '999.999.999.999',
-                'vendor': 'ApiVendor',
-                'mac': 'AA:BB:CC:DD:EE:03'
-            },
-            HTTP_X_CSRFTOKEN=self.csrf_token
-        )
+        payload = {
+            'hostname': 'apiHost',
+            'ip': '999.999.999.999',
+            'vendor': 'ApiVendor',
+            'mac': 'AA:BB:CC:DD:EE:03'
+        }
+        response = self.api_post('add_device', payload)
         self.assertEqual(response.status_code, 400)
         self.assertIn(b'Invalid IP Address', response.content)
 
     def test_add_device_invalid_hostname(self):
-        response = self.client.post(
-            reverse('add_device'),
-            {
-                'hostname': '!!!invalid!!!',
-                'ip': '10.0.0.4',
-                'vendor': 'ApiVendor',
-                'mac': 'AA:BB:CC:DD:EE:04'
-            },
-            HTTP_X_CSRFTOKEN=self.csrf_token
-        )
+        payload = {
+            'hostname': '!!!invalid!!!',
+            'ip': '10.0.0.4',
+            'vendor': 'ApiVendor',
+            'mac': 'AA:BB:CC:DD:EE:04'
+        }
+        response = self.api_post('add_device', payload)
         self.assertEqual(response.status_code, 400)
         self.assertIn(b'Invalid Hostname', response.content)
 
     def test_add_and_update_device_via_api(self):
-        # Add first device
-        response1 = self.client.post(
-            reverse('add_device'),
-            {
-                'hostname': 'apiHost1',
-                'ip': '10.0.0.2',
-                'vendor': 'ApiVendor1',
-                'mac': 'AA:BB:CC:DD:EE:01'
-            },
-            HTTP_X_CSRFTOKEN=self.csrf_token
-        )
+        payload1 = {
+            'hostname': 'apiHost1',
+            'ip': '10.0.0.2',
+            'vendor': 'ApiVendor1',
+            'mac': 'AA:BB:CC:DD:EE:01'
+        }
+        payload2 = {
+            'hostname': 'apiHost2',
+            'ip': '10.0.0.3',
+            'vendor': 'ApiVendor2',
+            'mac': 'AA:BB:CC:DD:EE:02'
+        }
+        payload3 = {
+            'hostname': 'apiHost1',
+            'ip': '10.0.0.99',
+            'vendor': 'ApiVendor1',
+            'mac': 'AA:BB:CC:DD:EE:01'
+        }
+        response1 = self.api_post('add_device', payload1)
         self.assertEqual(response1.status_code, 200)
         self.assertIn(b'Device added', response1.content)
-
-        # Add second device
-        response2 = self.client.post(
-            reverse('add_device'),
-            {
-                'hostname': 'apiHost2',
-                'ip': '10.0.0.3',
-                'vendor': 'ApiVendor2',
-                'mac': 'AA:BB:CC:DD:EE:02'
-            },
-            HTTP_X_CSRFTOKEN=self.csrf_token
-        )
+        response2 = self.api_post('add_device', payload2)
         self.assertEqual(response2.status_code, 200)
         self.assertIn(b'Device added', response2.content)
-
-        # Validate both devices exist in DB
         from .models import Device
         devices = Device.objects.all()
         self.assertEqual(devices.count(), 2)
         macs = set(dev.mac for dev in devices)
         self.assertIn('AABBCCDDEE01', macs)
         self.assertIn('AABBCCDDEE02', macs)
-
-        # Add first device again with changed IP
-        response3 = self.client.post(
-            reverse('add_device'),
-            {
-                'hostname': 'apiHost1',
-                'ip': '10.0.0.99',  # changed IP
-                'vendor': 'ApiVendor1',
-                'mac': 'AA:BB:CC:DD:EE:01'
-            },
-            HTTP_X_CSRFTOKEN=self.csrf_token
-        )
+        response3 = self.api_post('add_device', payload3)
         self.assertEqual(response3.status_code, 200)
         self.assertIn(b'Device updated', response3.content)
-
-        # Validate device count is still 2 and IP is updated
         devices = Device.objects.all()
         self.assertEqual(devices.count(), 2)
         dev1 = Device.objects.get(mac='AABBCCDDEE01')
@@ -319,100 +305,79 @@ class TestDeviceApi(TestCase):
         self.assertEqual(dev2.ip, '10.0.0.3')
 
     def test_add_port_missing_mac(self):
-        response = self.client.post(
-            reverse('add_port'),
-            {
-                'port': '80',
-                'protocol': 'TCP',
-                'name': 'http',
-                'version': '1.0',
-                'product': 'nginx'
-            },
-            HTTP_X_CSRFTOKEN=self.csrf_token
-        )
+        payload = {
+            'port': '80',
+            'protocol': 'TCP',
+            'name': 'http',
+            'version': '1.0',
+            'product': 'nginx'
+        }
+        response = self.api_post('add_port', payload)
         self.assertEqual(response.status_code, 400)
         self.assertIn(b'missing mac address', response.content)
 
     def test_add_port_missing_port(self):
-        response = self.client.post(
-            reverse('add_port'),
-            {
-                'mac': 'AA:BB:CC:DD:EE:05',
-                'protocol': 'TCP',
-                'name': 'http',
-                'version': '1.0',
-                'product': 'nginx'
-            },
-            HTTP_X_CSRFTOKEN=self.csrf_token
-        )
+        payload = {
+            'mac': 'AA:BB:CC:DD:EE:05',
+            'protocol': 'TCP',
+            'name': 'http',
+            'version': '1.0',
+            'product': 'nginx'
+        }
+        response = self.api_post('add_port', payload)
         self.assertEqual(response.status_code, 400)
         self.assertIn(b'missing port number', response.content)
 
     def test_add_port_missing_protocol(self):
-        response = self.client.post(
-            reverse('add_port'),
-            {
-                'mac': 'AA:BB:CC:DD:EE:05',
-                'port': '80',
-                'name': 'http',
-                'version': '1.0',
-                'product': 'nginx'
-            },
-            HTTP_X_CSRFTOKEN=self.csrf_token
-        )
+        payload = {
+            'mac': 'AA:BB:CC:DD:EE:05',
+            'port': '80',
+            'name': 'http',
+            'version': '1.0',
+            'product': 'nginx'
+        }
+        response = self.api_post('add_port', payload)
         self.assertEqual(response.status_code, 400)
         self.assertIn(b'missing protocol', response.content)
 
     def test_add_port_missing_name(self):
-        response = self.client.post(
-            reverse('add_port'),
-            {
-                'mac': 'AA:BB:CC:DD:EE:05',
-                'port': '80',
-                'protocol': 'TCP',
-                'version': '1.0',
-                'product': 'nginx'
-            },
-            HTTP_X_CSRFTOKEN=self.csrf_token
-        )
+        payload = {
+            'mac': 'AA:BB:CC:DD:EE:05',
+            'port': '80',
+            'protocol': 'TCP',
+            'version': '1.0',
+            'product': 'nginx'
+        }
+        response = self.api_post('add_port', payload)
         self.assertEqual(response.status_code, 400)
         self.assertIn(b'missing port name', response.content)
 
     def test_add_port_device_not_found(self):
-        response = self.client.post(
-            reverse('add_port'),
-            {
-                'mac': 'AA:BB:CC:DD:EE:99',
-                'port': '80',
-                'protocol': 'TCP',
-                'name': 'http',
-                'version': '1.0',
-                'product': 'nginx'
-            },
-            HTTP_X_CSRFTOKEN=self.csrf_token
-        )
+        payload = {
+            'mac': 'AA:BB:CC:DD:EE:99',
+            'port': '80',
+            'protocol': 'TCP',
+            'name': 'http',
+            'version': '1.0',
+            'product': 'nginx'
+        }
+        response = self.api_post('add_port', payload)
         self.assertEqual(response.status_code, 400)
         self.assertIn(b'device not found', response.content)
 
     def test_sensor_health_missing_mac(self):
-        response = self.client.post(
-            reverse('sensor_health'),
-            {
-                'hostname': 'sensorHost'
-            },
-            HTTP_X_CSRFTOKEN=self.csrf_token
-        )
+        payload = {
+            'hostname': 'sensorHost'
+        }
+        response = self.api_post('sensor_health', payload)
         self.assertEqual(response.status_code, 400)
         self.assertIn(b'Unknown Sensor MAC', response.content)
 
     def test_sensor_health_missing_hostname(self):
-        response = self.client.post(
-            reverse('sensor_health'),
-            {
-                'mac': 'AA:BB:CC:DD:EE:10'
-            },
-            HTTP_X_CSRFTOKEN=self.csrf_token
-        )
+        payload = {
+            'mac': 'AA:BB:CC:DD:EE:10'
+        }
+        response = self.api_post('sensor_health', payload)
         self.assertEqual(response.status_code, 400)
         self.assertIn(b'unknown sensor Hostname', response.content)
 
@@ -420,14 +385,11 @@ class TestDeviceApi(TestCase):
         from .models import Sensor
         mac = 'AA:BB:CC:DD:EE:20'
         hostname = 'sensorHostNew'
-        response = self.client.post(
-            reverse('sensor_health'),
-            {
-                'mac': mac,
-                'hostname': hostname
-            },
-            HTTP_X_CSRFTOKEN=self.csrf_token
-        )
+        payload = {
+            'mac': mac,
+            'hostname': hostname
+        }
+        response = self.api_post('sensor_health', payload)
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'sensor information updated', response.content)
         sensors = Sensor.objects.filter(mac=mac)
@@ -439,7 +401,6 @@ class TestDeviceApi(TestCase):
         mac = 'AA:BB:CC:DD:EE:21'
         old_hostname = 'sensorHostOld'
         new_hostname = 'sensorHostUpdated'
-        # Create sensor
         sensor = Sensor.objects.create(
             mac=mac,
             hostname=old_hostname,
@@ -447,15 +408,11 @@ class TestDeviceApi(TestCase):
             last_seen=timezone.now() - datetime.timedelta(days=1)
         )
         old_last_seen = sensor.last_seen
-        # POST to update
-        response = self.client.post(
-            reverse('sensor_health'),
-            {
-                'mac': mac,
-                'hostname': new_hostname
-            },
-            HTTP_X_CSRFTOKEN=self.csrf_token
-        )
+        payload = {
+            'mac': mac,
+            'hostname': new_hostname
+        }
+        response = self.api_post('sensor_health', payload)
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'sensor information updated', response.content)
         sensor.refresh_from_db()
@@ -463,18 +420,46 @@ class TestDeviceApi(TestCase):
         self.assertTrue(sensor.last_seen > old_last_seen)
 
     def test_add_port_without_device(self):
-        # Try to add a port for a MAC that does not exist as a device
-        response = self.client.post(
-            reverse('add_port'),
-            {
-                'mac': 'AA:BB:CC:DD:EE:99',
-                'port': '8080',
-                'protocol': 'TCP',
-                'name': 'http',
-                'version': '1.0',
-                'product': 'nginx'
-            },
-            HTTP_X_CSRFTOKEN=self.csrf_token
-        )
+        payload = {
+            'mac': 'AA:BB:CC:DD:EE:99',
+            'port': '8080',
+            'protocol': 'TCP',
+            'name': 'http',
+            'version': '1.0',
+            'product': 'nginx'
+        }
+        response = self.api_post('add_port', payload)
         self.assertEqual(response.status_code, 400)
         self.assertIn(b'device not found', response.content)
+
+
+class TestDeviceApiForm(BaseDeviceApiTest):
+    def api_post(self, url_name, data, extra=None):
+        if extra is None:
+            extra = {}
+
+        url = reverse(url_name)
+        return self.client.post(
+            url,
+            data,
+            format='multipart',
+            HTTP_X_CSRFTOKEN=self.csrf_token,
+            **extra
+        )
+
+
+class TestDeviceApiJson(BaseDeviceApiTest):
+    def api_post(self, url_name, data, extra=None):
+        if extra is None:
+            extra = {}
+
+        url = reverse(url_name)
+        # Ensure Accept header is always set to application/json
+        headers = {'HTTP_X_CSRFTOKEN': self.csrf_token, 'HTTP_ACCEPT': 'application/json'}
+        headers.update(extra)
+        return self.client.post(
+            url,
+            data,
+            format='json',
+            **headers
+        )
