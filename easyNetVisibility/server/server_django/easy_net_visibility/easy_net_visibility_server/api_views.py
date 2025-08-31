@@ -52,7 +52,7 @@ def _create_device_obj_from_data(data) -> Device:
 def get_csrf_token(request):
     if not getattr(settings, 'CSRF_PROTECTION_ENABLED', True):
         if _client_expects_json(request):
-            return JsonResponse({"message": "NOT_REQUIRED"})
+            return JsonResponse({"csrfToken": "NOT_REQUIRED"})
         return HttpResponse("NOT_REQUIRED")
 
     token = get_token(request)
