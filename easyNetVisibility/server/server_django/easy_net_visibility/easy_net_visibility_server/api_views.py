@@ -47,15 +47,15 @@ def add_device(request):
     new_device_data = read_device_details_from_request_body(request)
     mac = new_device_data.mac
     if len(mac) == 0:
-        return return_error("Must Supply MAC Address")
+        return return_error("Must Supply MAC Address", status=400)
     if not validators.mac_address(mac):
-        return return_error("Invalid MAC Address")
+        return return_error("Invalid MAC Address", status=400)
     ip = new_device_data.ip
     if len(ip) > 0 and not validators.ip_address(ip):
-        return return_error("Invalid IP Address")
+        return return_error("Invalid IP Address", status=400)
     hostname = new_device_data.hostname
     if len(hostname) > 0 and not validators.hostname(hostname):
-        return return_error("Invalid Hostname")
+        return return_error("Invalid Hostname", status=400)
 
     existing_devices = Device.objects.filter(mac=mac)
 
@@ -102,13 +102,13 @@ def add_port(request):
     if mac:
         mac = validators.convert_mac(mac)
     if len(mac) == 0:
-        return return_error('missing mac address')
+        return return_error('missing mac address', status=400)
     if len(port_num) == 0:
-        return return_error('missing port number')
+        return return_error('missing port number', status=400)
     if len(protocol) == 0:
-        return return_error('missing protocol')
+        return return_error('missing protocol', status=400)
     if len(name) == 0:
-        return return_error('missing port name')
+        return return_error('missing port name', status=400)
 
     if len(version) == 0:
         version = 'Unknown'
@@ -126,7 +126,7 @@ def add_port(request):
 
     existing_devices = Device.objects.filter(mac=mac)
     if len(existing_devices) == 0:
-        return return_error('device not found')
+        return return_error('device not found', status=400)
 
     existing_device = existing_devices[0]
     port_data.device = existing_device
@@ -166,9 +166,9 @@ def sensor_health(request):
     sensor_hostname = data.get('hostname', '')
 
     if len(sensor_mac) == 0:
-        return return_error('Unknown Sensor MAC')
+        return return_error('Unknown Sensor MAC', status=400)
     if len(sensor_hostname) == 0:
-        return return_error('unknown sensor Hostname')
+        return return_error('unknown sensor Hostname', status=400)
 
     sensor_info = Sensor()
     sensor_info.mac = sensor_mac
@@ -200,5 +200,5 @@ def return_success(message):
     return Response({"message": message})
 
 
-def return_error(error):
-    return Response({"error": error}, status=500)
+def return_error(message, status=500):
+    return Response({'error': message}, status=status)

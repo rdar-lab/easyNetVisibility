@@ -1,3 +1,480 @@
 from django.test import TestCase
+from django.urls import reverse
+from django.utils import timezone
+from .models import Device, Port
+from rest_framework.test import APIClient
+import datetime
+from django.contrib.auth.models import User
 
-# Create your tests here.
+class TestDeviceModel(TestCase):
+    def setUp(self):
+        self.device = Device.objects.create(
+            nickname='TestDevice',
+            hostname='testhost',
+            ip='192.168.1.2',
+            mac='AA:BB:CC:DD:EE:FF',
+            vendor='TestVendor',
+            first_seen=timezone.now() - datetime.timedelta(days=2),
+            last_seen=timezone.now() - datetime.timedelta(hours=1)
+        )
+
+    def test_name_returns_nickname(self):
+        self.assertEqual(self.device.name(), 'TestDevice')
+
+    def test_online_true(self):
+        self.assertTrue(self.device.online())
+
+    def test_first_seen_today_false(self):
+        self.assertFalse(self.device.first_seen_today())
+
+    def test_is_hidden_false(self):
+        self.assertFalse(self.device.is_hidden())
+
+    def test_str_method(self):
+        self.assertIn('TestDevice', str(self.device))
+        self.assertIn('192.168.1.2', str(self.device))
+
+class TestPortModel(TestCase):
+    def setUp(self):
+        self.device = Device.objects.create(
+            nickname='TestDevice',
+            hostname='testhost',
+            ip='192.168.1.2',
+            mac='AA:BB:CC:DD:EE:11',
+            vendor='TestVendor',
+            first_seen=timezone.now(),
+            last_seen=timezone.now()
+        )
+        self.port = Port.objects.create(
+            device=self.device,
+            port_num=80,
+            protocol='TCP',
+            name='http',
+            product='nginx',
+            version='1.18',
+            first_seen=timezone.now(),
+            last_seen=timezone.now()  # Added last_seen to fix NOT NULL error
+        )
+
+    def test_port_num(self):
+        self.assertEqual(self.port.port_num, 80)
+        self.assertEqual(self.port.device.mac, 'AA:BB:CC:DD:EE:11')
+
+class TestDeviceView(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='testuser', password='testpass')
+        self.client.login(username='testuser', password='testpass')
+        self.device = Device.objects.create(
+            nickname='ViewDevice',
+            hostname='viewhost',
+            ip='10.0.0.1',
+            mac='AA:BB:CC:DD:EE:22',
+            vendor='Vendor',
+            first_seen=timezone.now(),
+            last_seen=timezone.now()
+        )
+
+    def test_home_view(self):
+        response = self.client.get(reverse('home'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'ViewDevice')
+
+    def test_rename_device(self):
+        response = self.client.post(reverse('rename_device'), {
+            'device_id': self.device.id,
+            'nickname': 'RenamedDevice'
+        })
+        self.device.refresh_from_db()
+        self.assertEqual(self.device.nickname, 'RenamedDevice')
+
+    def test_delete_device(self):
+        response = self.client.post(reverse('delete_device'), {
+            'device_id': self.device.id
+        })
+        self.assertFalse(Device.objects.filter(id=self.device.id).exists())
+
+    def test_delete_device_deletes_ports(self):
+        from .models import Device, Port
+        # Create device
+        device = Device.objects.create(
+            nickname='DeleteMe',
+            hostname='deleteme-host',
+            ip='192.168.1.100',
+            mac='AA:BB:CC:DD:EE:DE',
+            vendor='TestVendor',
+            first_seen=timezone.now(),
+            last_seen=timezone.now()
+        )
+        # Add ports to device
+        port1 = Port.objects.create(
+            device=device,
+            port_num=80,
+            protocol='TCP',
+            name='http',
+            product='nginx',
+            version='1.0',
+            first_seen=timezone.now(),
+            last_seen=timezone.now()
+        )
+        port2 = Port.objects.create(
+            device=device,
+            port_num=443,
+            protocol='TCP',
+            name='https',
+            product='nginx',
+            version='1.0',
+            first_seen=timezone.now(),
+            last_seen=timezone.now()
+        )
+        # Confirm device and ports exist
+        self.assertEqual(Device.objects.filter(id=device.id).count(), 1)
+        self.assertEqual(Port.objects.filter(device=device).count(), 2)
+        # Delete device via view
+        response = self.client.post(
+            reverse('delete_device'),
+            {'device_id': device.id}
+        )
+        self.assertEqual(response.status_code, 200)
+        # Confirm device and ports are deleted
+        self.assertEqual(Device.objects.filter(id=device.id).count(), 0)
+        self.assertEqual(Port.objects.filter(device=device).count(), 0)
+
+    def test_rename_device_flow(self):
+        from .models import Device
+        # Create a device
+        device = Device.objects.create(
+            nickname='OldName',
+            hostname='rename-host',
+            ip='192.168.1.101',
+            mac='AA:BB:CC:DD:EE:RN',
+            vendor='TestVendor',
+            first_seen=timezone.now(),
+            last_seen=timezone.now()
+        )
+        # Rename the device via the view
+        new_nickname = 'NewName'
+        response = self.client.post(
+            reverse('rename_device'),
+            {'device_id': device.id, 'nickname': new_nickname}
+        )
+        self.assertEqual(response.status_code, 200)
+        # Refresh from DB and check nickname
+        device.refresh_from_db()
+        self.assertEqual(device.nickname, new_nickname)
+        # Optionally, check response contains new nickname
+        self.assertContains(response, new_nickname)
+
+    def test_delete_device_invalid_id(self):
+        # Try to delete a device that does not exist
+        invalid_id = 999999
+        response = self.client.post(
+            reverse('delete_device'),
+            {'device_id': invalid_id}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Device.objects.filter(id=invalid_id).exists())
+        # The response should contain the capitalized warning message
+        self.assertContains(response, f"Device matching query does not exist")
+
+    def test_rename_device_invalid_id(self):
+        # Try to rename a device that does not exist
+        invalid_id = 888888
+        response = self.client.post(
+            reverse('rename_device'),
+            {'device_id': invalid_id, 'nickname': 'ShouldNotExist'}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Device.objects.filter(id=invalid_id).exists())
+        # The response should contain the capitalized warning message
+        self.assertContains(response, f"Device matching query does not exist")
+
+class TestDeviceApi(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='apiuser', password='apipass')
+        self.client = APIClient()
+        self.client.login(username='apiuser', password='apipass')
+        # Get CSRF token for API requests
+        response = self.client.get(reverse('get_csrf_token'))
+        self.csrf_token = response.content.decode()
+        self.client.cookies['csrftoken'] = self.csrf_token
+
+    def test_get_csrf_token(self):
+        response = self.client.get(reverse('get_csrf_token'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.content)
+
+    def test_add_device_missing_mac(self):
+        response = self.client.post(
+            reverse('add_device'),
+            {
+                'hostname': 'apiHost',
+                'ip': '10.0.0.2',
+                'vendor': 'ApiVendor',
+                'mac': ''
+            },
+            HTTP_X_CSRFTOKEN=self.csrf_token
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(b'Must Supply MAC Address', response.content)
+
+    def test_add_device_invalid_mac(self):
+        response = self.client.post(
+            reverse('add_device'),
+            {
+                'hostname': 'apiHost',
+                'ip': '10.0.0.2',
+                'vendor': 'ApiVendor',
+                'mac': 'INVALIDMAC'
+            },
+            HTTP_X_CSRFTOKEN=self.csrf_token
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(b'Invalid MAC Address', response.content)
+
+    def test_add_device_invalid_ip(self):
+        response = self.client.post(
+            reverse('add_device'),
+            {
+                'hostname': 'apiHost',
+                'ip': '999.999.999.999',
+                'vendor': 'ApiVendor',
+                'mac': 'AA:BB:CC:DD:EE:03'
+            },
+            HTTP_X_CSRFTOKEN=self.csrf_token
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(b'Invalid IP Address', response.content)
+
+    def test_add_device_invalid_hostname(self):
+        response = self.client.post(
+            reverse('add_device'),
+            {
+                'hostname': '!!!invalid!!!',
+                'ip': '10.0.0.4',
+                'vendor': 'ApiVendor',
+                'mac': 'AA:BB:CC:DD:EE:04'
+            },
+            HTTP_X_CSRFTOKEN=self.csrf_token
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(b'Invalid Hostname', response.content)
+
+    def test_add_and_update_device_via_api(self):
+        # Add first device
+        response1 = self.client.post(
+            reverse('add_device'),
+            {
+                'hostname': 'apiHost1',
+                'ip': '10.0.0.2',
+                'vendor': 'ApiVendor1',
+                'mac': 'AA:BB:CC:DD:EE:01'
+            },
+            HTTP_X_CSRFTOKEN=self.csrf_token
+        )
+        self.assertEqual(response1.status_code, 200)
+        self.assertIn(b'Device added', response1.content)
+
+        # Add second device
+        response2 = self.client.post(
+            reverse('add_device'),
+            {
+                'hostname': 'apiHost2',
+                'ip': '10.0.0.3',
+                'vendor': 'ApiVendor2',
+                'mac': 'AA:BB:CC:DD:EE:02'
+            },
+            HTTP_X_CSRFTOKEN=self.csrf_token
+        )
+        self.assertEqual(response2.status_code, 200)
+        self.assertIn(b'Device added', response2.content)
+
+        # Validate both devices exist in DB
+        from .models import Device
+        devices = Device.objects.all()
+        self.assertEqual(devices.count(), 2)
+        macs = set(dev.mac for dev in devices)
+        self.assertIn('AABBCCDDEE01', macs)
+        self.assertIn('AABBCCDDEE02', macs)
+
+        # Add first device again with changed IP
+        response3 = self.client.post(
+            reverse('add_device'),
+            {
+                'hostname': 'apiHost1',
+                'ip': '10.0.0.99',  # changed IP
+                'vendor': 'ApiVendor1',
+                'mac': 'AA:BB:CC:DD:EE:01'
+            },
+            HTTP_X_CSRFTOKEN=self.csrf_token
+        )
+        self.assertEqual(response3.status_code, 200)
+        self.assertIn(b'Device updated', response3.content)
+
+        # Validate device count is still 2 and IP is updated
+        devices = Device.objects.all()
+        self.assertEqual(devices.count(), 2)
+        dev1 = Device.objects.get(mac='AABBCCDDEE01')
+        self.assertEqual(dev1.ip, '10.0.0.99')
+        dev2 = Device.objects.get(mac='AABBCCDDEE02')
+        self.assertEqual(dev2.ip, '10.0.0.3')
+
+    def test_add_port_missing_mac(self):
+        response = self.client.post(
+            reverse('add_port'),
+            {
+                'port': '80',
+                'protocol': 'TCP',
+                'name': 'http',
+                'version': '1.0',
+                'product': 'nginx'
+            },
+            HTTP_X_CSRFTOKEN=self.csrf_token
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(b'missing mac address', response.content)
+
+    def test_add_port_missing_port(self):
+        response = self.client.post(
+            reverse('add_port'),
+            {
+                'mac': 'AA:BB:CC:DD:EE:05',
+                'protocol': 'TCP',
+                'name': 'http',
+                'version': '1.0',
+                'product': 'nginx'
+            },
+            HTTP_X_CSRFTOKEN=self.csrf_token
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(b'missing port number', response.content)
+
+    def test_add_port_missing_protocol(self):
+        response = self.client.post(
+            reverse('add_port'),
+            {
+                'mac': 'AA:BB:CC:DD:EE:05',
+                'port': '80',
+                'name': 'http',
+                'version': '1.0',
+                'product': 'nginx'
+            },
+            HTTP_X_CSRFTOKEN=self.csrf_token
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(b'missing protocol', response.content)
+
+    def test_add_port_missing_name(self):
+        response = self.client.post(
+            reverse('add_port'),
+            {
+                'mac': 'AA:BB:CC:DD:EE:05',
+                'port': '80',
+                'protocol': 'TCP',
+                'version': '1.0',
+                'product': 'nginx'
+            },
+            HTTP_X_CSRFTOKEN=self.csrf_token
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(b'missing port name', response.content)
+
+    def test_add_port_device_not_found(self):
+        response = self.client.post(
+            reverse('add_port'),
+            {
+                'mac': 'AA:BB:CC:DD:EE:99',
+                'port': '80',
+                'protocol': 'TCP',
+                'name': 'http',
+                'version': '1.0',
+                'product': 'nginx'
+            },
+            HTTP_X_CSRFTOKEN=self.csrf_token
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(b'device not found', response.content)
+
+    def test_sensor_health_missing_mac(self):
+        response = self.client.post(
+            reverse('sensor_health'),
+            {
+                'hostname': 'sensorHost'
+            },
+            HTTP_X_CSRFTOKEN=self.csrf_token
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(b'Unknown Sensor MAC', response.content)
+
+    def test_sensor_health_missing_hostname(self):
+        response = self.client.post(
+            reverse('sensor_health'),
+            {
+                'mac': 'AA:BB:CC:DD:EE:10'
+            },
+            HTTP_X_CSRFTOKEN=self.csrf_token
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(b'unknown sensor Hostname', response.content)
+
+    def test_sensor_health_creates_sensor(self):
+        from .models import Sensor
+        mac = 'AA:BB:CC:DD:EE:20'
+        hostname = 'sensorHostNew'
+        response = self.client.post(
+            reverse('sensor_health'),
+            {
+                'mac': mac,
+                'hostname': hostname
+            },
+            HTTP_X_CSRFTOKEN=self.csrf_token
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'sensor information updated', response.content)
+        sensors = Sensor.objects.filter(mac=mac)
+        self.assertEqual(sensors.count(), 1)
+        self.assertEqual(sensors[0].hostname, hostname)
+
+    def test_sensor_health_updates_last_seen(self):
+        from .models import Sensor
+        mac = 'AA:BB:CC:DD:EE:21'
+        old_hostname = 'sensorHostOld'
+        new_hostname = 'sensorHostUpdated'
+        # Create sensor
+        sensor = Sensor.objects.create(
+            mac=mac,
+            hostname=old_hostname,
+            first_seen=timezone.now() - datetime.timedelta(days=1),
+            last_seen=timezone.now() - datetime.timedelta(days=1)
+        )
+        old_last_seen = sensor.last_seen
+        # POST to update
+        response = self.client.post(
+            reverse('sensor_health'),
+            {
+                'mac': mac,
+                'hostname': new_hostname
+            },
+            HTTP_X_CSRFTOKEN=self.csrf_token
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'sensor information updated', response.content)
+        sensor.refresh_from_db()
+        self.assertEqual(sensor.hostname, new_hostname)
+        self.assertTrue(sensor.last_seen > old_last_seen)
+
+    def test_add_port_without_device(self):
+        # Try to add a port for a MAC that does not exist as a device
+        response = self.client.post(
+            reverse('add_port'),
+            {
+                'mac': 'AA:BB:CC:DD:EE:99',
+                'port': '8080',
+                'protocol': 'TCP',
+                'name': 'http',
+                'version': '1.0',
+                'product': 'nginx'
+            },
+            HTTP_X_CSRFTOKEN=self.csrf_token
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(b'device not found', response.content)

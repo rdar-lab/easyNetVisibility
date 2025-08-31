@@ -5,6 +5,7 @@ from django.utils import timezone
 
 # Create your models here.
 class Device(models.Model):
+    objects: models.Manager["Device"]  # type: ignore
     id = models.AutoField(primary_key=True, db_column='device_id')
     nickname = models.CharField(max_length=255, blank=True, null=True)
     hostname = models.CharField(max_length=255, blank=True, null=True)
@@ -40,6 +41,7 @@ class Device(models.Model):
 
 
 class Port(models.Model):
+    objects: models.Manager["Port"]  # type: ignore
     id = models.AutoField(primary_key=True, db_column='port_id')
     device = models.ForeignKey(Device, on_delete=models.CASCADE, db_index=True)
     port_num = models.IntegerField(db_index=True)
@@ -62,6 +64,7 @@ class Port(models.Model):
 
 
 class Sensor(models.Model):
+    objects: models.Manager["Sensor"]  # type: ignore
     id = models.AutoField(primary_key=True, db_column='sensor_id')
     mac = models.CharField(max_length=255, db_index=True, unique=True)
     hostname = models.CharField(max_length=255, blank=True, null=True)
