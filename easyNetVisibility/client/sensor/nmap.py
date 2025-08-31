@@ -5,16 +5,16 @@ import os
 import xml.etree.ElementTree as ElementTree
 
 import network_utils
-import server_api
 
-devices = {}
-logger = logging.getLogger('EasyNetVisibility')
+_found_devices = {}
+_logger = logging.getLogger('EasyNetVisibility')
 
 
 def ping_sweep():
-    global devices
+    global _found_devices
+    result_devices = []
 
-    logger.info('Beginning Ping Sweep')
+    _logger.info('Beginning Ping Sweep')
     if not os.path.exists('/opt/easy_net_visibility/client/nmap_scans'):
         os.makedirs('/opt/easy_net_visibility/client/nmap_scans')
     ip = network_utils.get_ip()
@@ -57,24 +57,32 @@ def ping_sweep():
                 if len(hostname) < 1:
                     hostname = "%s (%s)" % (ip_address, mac_address)
 
-                logger.info('found device:' + str((hostname, str(ip_address), mac_address, mac_vendor)))
-                devices[mac_address] = ip_address
-                server_api.add_device(hostname, str(ip_address), mac_address, mac_vendor)
+                _logger.info('found device:' + str((hostname, str(ip_address), mac_address, mac_vendor)))
+
+                result_devices.append(
+                    {'hostname': hostname, 'ip': str(ip_address), 'mac': mac_address, 'vendor': mac_vendor}
+                )
     except Exception as e:
-        logger.error("Error with ping sweep XML file: " + str(e))
+        _logger.error("Error with ping sweep XML file: " + str(e))
     os.system('rm ' + result_file)
+
+    _found_devices = {d['mac']: d['ip'] for d in result_devices}
+
+    return result_devices
 
 
 def port_scan():
-    logger.info("Beginning port scan")
+    result_ports = []
+
+    _logger.info("Beginning port scan")
     if not os.path.exists('/opt/easy_net_visibility/client/nmap_scans'):
         os.makedirs('/opt/easy_net_visibility/client/nmap_scans')
 
-    for device_mac in devices:
-        logger.info("Port scanning %s", devices[device_mac])
+    for device_mac in _found_devices:
+        _logger.info("Port scanning %s", _found_devices[device_mac])
         result_file = "/opt/easy_net_visibility/client/nmap_scans/portScan_%s_%s.xml" % (
-            datetime.now().strftime('%Y-%m-%d_%H-%M'), devices[device_mac])
-        os.popen("nmap -sV -oX %s %s" % (result_file, devices[device_mac])).read()
+            datetime.now().strftime('%Y-%m-%d_%H-%M'), _found_devices[device_mac])
+        os.popen("nmap -sV -oX %s %s" % (result_file, _found_devices[device_mac])).read()
         try:
             tree = ElementTree.parse(result_file)
             root = tree.getroot()
@@ -99,8 +107,9 @@ def port_scan():
                                  'name': service_name,
                                  'version': service_version,
                                  'product': service_product}
-                    logger.info('found port: ' + str(port_info))
-                    server_api.add_port(port_info)
+                    _logger.info('found port: ' + str(port_info))
+                    result_ports.append(port_info)
         except Exception as e:
-            logger.error("Error with port scan XML file: " + str(e))
+            _logger.error("Error with port scan XML file: " + str(e))
         os.system('rm ' + result_file)
+    return result_ports

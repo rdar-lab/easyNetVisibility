@@ -1,6 +1,6 @@
 from time import sleep
 
-import ConfigParser
+import configparser
 import logging
 import threading
 
@@ -11,18 +11,20 @@ import nmap
 import server_api
 
 logs.setup()
-logger = logging.getLogger('EasyNetVisibility')
+_logger = logging.getLogger('EasyNetVisibility')
 
 
 def start_ping_sweep():
     while 1:
         try:
-            nmap.ping_sweep()
-        except Exception, e:
-            logger.error(str(e))
-            pass
+            devices = nmap.ping_sweep()
+            _logger.info(f"Detected {len(devices)} devices")
+            if len(devices) > 0:
+                server_api.add_devices(devices)
+        except Exception as e:
+            _logger.exception("Ping sweep error: " + str(e))
 
-        sleep(20)
+        sleep(60 * 10)
 
 
 def start_port_scan():
@@ -30,12 +32,14 @@ def start_port_scan():
         # Port Scan Every Hour, sleeping first to let first ping sweep finish
         sleep(60)
         try:
-            nmap.port_scan()
-        except Exception, e:
-            logger.error(str(e))
-            pass
+            ports = nmap.port_scan()
+            _logger.info(f"Detected {len(ports)} open ports")
+            if len(ports) > 0:
+                server_api.add_ports(ports)
+        except Exception as e:
+            _logger.exception("Port scan error: " + str(e))
 
-        sleep(3540)
+        sleep(60 * 60)
 
 
 def start_health_check():
@@ -43,30 +47,38 @@ def start_health_check():
         try:
             # report health
             healthCheck.report_health()
-        except Exception, e:
-            logger.error(str(e))
-            pass
-        sleep(300)
+        except Exception as e:
+            _logger.exception("Health check error: " + str(e))
+
+        sleep(60 * 5)
 
 
 def run():
-    logger.info('Starting up EasyNetVisibility Sensor')
+    _logger.info('Starting up EasyNetVisibility Sensor')
 
-    config = ConfigParser.RawConfigParser()
+    config = configparser.RawConfigParser()
     isOK = config.read(filenames='/opt/sensor/config/config.ini')
     if not isOK:
-        logger.error("Was unable to read the configuration file - /opt/sensor/config/config.ini is missing")
+        _logger.error("Was unable to read the configuration file - /opt/sensor/config/config.ini is missing")
         return
 
     server_url = config.get('ServerAPI', 'serverURL')
     server_username = config.get('ServerAPI', 'serverUsername')
     server_password = config.get('ServerAPI', 'serverPassword')
-    validate_server_identity_param = config.get('ServerAPI', 'validateServerIdentity')
-    validate_server_identity = True
-    if validate_server_identity_param == 'False':
-        validate_server_identity = False
 
-    server_api.init(server_url, server_username, server_password, validate_server_identity)
+    if config.has_option('ServerAPI', 'validateServerIdentity'):
+        validate_server_identity_param = config.get('ServerAPI', 'validateServerIdentity')
+        validate_server_identity = validate_server_identity_param != 'False'
+    else:
+        validate_server_identity = True
+
+    if config.has_option('ServerAPI', 'callTimeout'):
+        call_timeout_param = config.get('ServerAPI', 'callTimeout')
+        call_timeout = int(call_timeout_param)
+    else:
+        call_timeout = 10000
+
+    server_api.init(server_url, server_username, server_password, validate_server_identity, call_timeout)
 
     interface = config.get('General', 'interface')
     network_utils.init(interface)
@@ -79,4 +91,5 @@ def run():
     port_scan_thread.start()
 
 
-run()
+if __name__ == '__main__':
+    run()

@@ -5,19 +5,19 @@ import socket
 import struct
 from scapy.all import get_if_hwaddr
 
-logger = logging.getLogger('EasyNetVisibility')
-interface = None
-detected_mac = None
-detected_hostname = None
+_logger = logging.getLogger('EasyNetVisibility')
+_interface = None
+_detected_mac = None
+_detected_hostname = None
 
 
 def init(param_interface):
-    global interface
-    interface = param_interface
+    global _interface
+    _interface = param_interface
 
 
 def get_interface():
-    return interface
+    return _interface
 
 
 def get_system_dfgw():
@@ -30,15 +30,21 @@ def get_system_dfgw():
 
 
 def get_ip():
+    if _interface is None:
+        _logger.warning("Interface is not set. Cannot get IP address.")
+        return None
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    return socket.inet_ntoa(fcntl.ioctl(s.fileno(), 0x8915, struct.pack('256s', interface[:15]))[20:24])
+    return socket.inet_ntoa(fcntl.ioctl(s.fileno(), 0x8915, struct.pack('256s', _interface[:15].encode('utf-8')))[20:24])
 
 
 def get_netmask():
+    if _interface is None:
+        _logger.warning("Interface is not set. Cannot get netmask.")
+        return None
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    netmask = socket.inet_ntoa(fcntl.ioctl(s.fileno(), 0x891b, struct.pack('256s', interface))[20:24])
-    netmask = sum([bin(int(x)).count('1') for x in netmask.split('.')])
-    return netmask
+    netmask = socket.inet_ntoa(fcntl.ioctl(s.fileno(), 0x891b, struct.pack('256s', _interface[:15].encode('utf-8')))[20:24])
+    netmask_bits = sum([bin(int(x)).count('1') for x in netmask.split('.')])
+    return netmask_bits
 
 
 def convert_mac(macAddress):
@@ -52,27 +58,32 @@ def convert_mac(macAddress):
 
 
 def get_mac():
-    global detected_mac
+    global _detected_mac
 
-    if detected_mac is not None:
-        return detected_mac
+    if _detected_mac is not None:
+        return _detected_mac
 
-    logger.info("Detecting machine MAC based on interface " + interface)
-    mac = get_if_hwaddr(interface)
+    if _interface is None:
+        _logger.warning("Interface is not set. Cannot detect MAC address.")
+        return None
+
+    _logger.info("Detecting machine MAC based on interface " + _interface)
+    mac = get_if_hwaddr(_interface)
     if mac != "00:00:00:00:00:00":
-        detected_mac = mac
-        logger.info("Detected machine MAC address:" + detected_mac)
-        return detected_mac
+        _detected_mac = mac
+        _logger.info("Detected machine MAC address:" + _detected_mac)
+        return _detected_mac
     else:
-        logger.info("Failure detecting the MAC address")
+        _logger.info("Failure detecting the MAC address")
+        return None
 
 
 def get_hostname():
-    global detected_hostname
+    global _detected_hostname
 
-    if detected_hostname is not None:
-        return detected_hostname
+    if _detected_hostname is not None:
+        return _detected_hostname
 
-    detected_hostname = socket.gethostname()
-    logger.info("Detected machine hostname:" + detected_hostname)
-    return detected_hostname
+    _detected_hostname = socket.gethostname()
+    _logger.info("Detected machine hostname:" + _detected_hostname)
+    return _detected_hostname
