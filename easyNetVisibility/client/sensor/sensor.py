@@ -32,10 +32,10 @@ def start_port_scan():
         # Port Scan Every Hour, sleeping first to let first ping sweep finish
         sleep(60)
         try:
-            ports = nmap.port_scan()
-            _logger.info(f"Detected {len(ports)} open ports")
-            if len(ports) > 0:
-                server_api.add_ports(ports)
+            for ports in nmap.port_scan():
+                _logger.info(f"Detected {len(ports)} open ports")
+                if len(ports) > 0:
+                    server_api.add_ports(ports)
         except Exception as e:
             _logger.exception("Port scan error: " + str(e))
 

@@ -72,18 +72,18 @@ def ping_sweep():
 
 
 def port_scan():
-    result_ports = []
-
     _logger.info("Beginning port scan")
     if not os.path.exists('/opt/easy_net_visibility/client/nmap_scans'):
         os.makedirs('/opt/easy_net_visibility/client/nmap_scans')
 
-    for device_mac in _found_devices:
-        _logger.info("Port scanning %s", _found_devices[device_mac])
+    for device_mac, device_ip in _found_devices.items():
+        result_ports = []
+        _logger.info(f"Port scanning {device_ip}")
         result_file = "/opt/easy_net_visibility/client/nmap_scans/portScan_%s_%s.xml" % (
-            datetime.now().strftime('%Y-%m-%d_%H-%M'), _found_devices[device_mac])
-        os.popen("nmap -sV -oX %s %s" % (result_file, _found_devices[device_mac])).read()
+            datetime.now().strftime('%Y-%m-%d_%H-%M'), device_ip)
+
         try:
+            os.popen("nmap -sV -oX %s %s" % (result_file, device_ip)).read()
             tree = ElementTree.parse(result_file)
             root = tree.getroot()
             # Parse the portScan.xml file
@@ -110,6 +110,6 @@ def port_scan():
                     _logger.info('found port: ' + str(port_info))
                     result_ports.append(port_info)
         except Exception as e:
-            _logger.error("Error with port scan XML file: " + str(e))
+            _logger.error("Error with port scan: " + str(e))
         os.system('rm ' + result_file)
-    return result_ports
+        yield result_ports
