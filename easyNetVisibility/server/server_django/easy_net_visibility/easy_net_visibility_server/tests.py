@@ -75,7 +75,7 @@ class TestDeviceView(TestCase):
             nickname='ViewDevice',
             hostname='viewhost',
             ip='10.0.0.1',
-            mac='AA:BB:CC:DD:EE:22',
+            mac='AABBCCDDEE22',
             vendor='Vendor',
             first_seen=timezone.now(),
             last_seen=timezone.now()
@@ -87,7 +87,7 @@ class TestDeviceView(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('ViewDevice', response_content)
         self.assertIn('10.0.0.1', response_content)  # Check if IP is displayed
-        self.assertIn('AA:BB:CC:DD:EE:22', response_content)  # Check if MAC is displayed
+        self.assertIn('AABBCCDDEE22', response_content)  # Check if MAC is displayed
 
     def test_rename_device(self):
         response = self.client.post(reverse('rename_device'), {
@@ -114,7 +114,7 @@ class TestDeviceView(TestCase):
             nickname='DeleteMe',
             hostname='deleteme-host',
             ip='192.168.1.100',
-            mac='AA:BB:CC:DD:EE:DE',
+            mac='AABBCCDDEEDE',
             vendor='TestVendor',
             first_seen=timezone.now(),
             last_seen=timezone.now()
@@ -160,7 +160,7 @@ class TestDeviceView(TestCase):
             nickname='OldName',
             hostname='rename-host',
             ip='192.168.1.101',
-            mac='AA:BB:CC:DD:EE:RN',
+            mac='AABBCCDDEERN',
             vendor='TestVendor',
             first_seen=timezone.now(),
             last_seen=timezone.now()
@@ -577,6 +577,133 @@ class TestAddDevicesApi(TestCase):
             'devices': [
                 {'mac': '', 'hostname': '', 'ip': '', 'vendor': ''},
                 {'mac': 'BADMAC', 'hostname': '', 'ip': '', 'vendor': ''}
+            ]
+        }
+        response = self.post_json(payload)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['success_count'], 0)
+        self.assertEqual(len(data['errors']), 2)
+
+
+class TestAddPortsApi(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='portuser', password='portpass')
+        self.client = APIClient()
+        self.client.login(username='portuser', password='portpass')
+        response = self.client.get(reverse('get_csrf_token'))
+        self.csrf_token = response.content.decode()
+        self.client.cookies['csrftoken'] = self.csrf_token
+        self.url = reverse('add_ports')
+        # Create a device for valid port tests
+        self.device = Device.objects.create(
+            nickname='PortDevice',
+            hostname='porthost',
+            ip='10.0.0.10',
+            mac='AABBCCDDEE10',
+            vendor='PortVendor',
+            first_seen=datetime.datetime.now(),
+            last_seen=datetime.datetime.now()
+        )
+
+    def post_json(self, payload):
+        return self.client.post(
+            self.url,
+            payload,
+            format='json',
+            HTTP_X_CSRFTOKEN=self.csrf_token,
+            HTTP_ACCEPT='application/json'
+        )
+
+    def test_only_accepts_json(self):
+        response = self.client.post(self.url, {'ports': []}, format='multipart', HTTP_X_CSRFTOKEN=self.csrf_token)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(b'Only JSON format supported', response.content)
+
+    def test_batch_add_all_valid(self):
+        payload = {
+            'ports': [
+                {'mac': 'AA:BB:CC:DD:EE:10', 'port': '80', 'protocol': 'TCP', 'name': 'http', 'version': '1.0', 'product': 'nginx'},
+                {'mac': 'AA:BB:CC:DD:EE:10', 'port': '443', 'protocol': 'TCP', 'name': 'https', 'version': '1.0', 'product': 'nginx'}
+            ]
+        }
+        response = self.post_json(payload)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['success_count'], 2)
+        self.assertEqual(len(data['errors']), 0)
+        self.assertEqual(Port.objects.filter(device=self.device).count(), 2)
+
+    def test_batch_add_some_invalid(self):
+        payload = {
+            'ports': [
+                {'mac': '', 'port': '80', 'protocol': 'TCP', 'name': 'http'},  # missing MAC
+                {'mac': 'AA:BB:CC:DD:EE:10', 'port': '', 'protocol': 'TCP', 'name': 'http'},  # missing port
+                {'mac': 'AA:BB:CC:DD:EE:10', 'port': '8080', 'protocol': '', 'name': 'http'},  # missing protocol
+                {'mac': 'AA:BB:CC:DD:EE:10', 'port': '8081', 'protocol': 'TCP', 'name': ''},  # missing name
+                {'mac': 'AA:BB:CC:DD:EE:99', 'port': '8082', 'protocol': 'TCP', 'name': 'http'}  # device not found
+            ]
+        }
+        response = self.post_json(payload)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['success_count'], 0)
+        self.assertEqual(len(data['errors']), 5)
+        error_msgs = [e['error'] for e in data['errors']]
+        self.assertTrue(any('missing mac address' in msg for msg in error_msgs))
+        self.assertTrue(any('missing port number' in msg for msg in error_msgs))
+        self.assertTrue(any('missing protocol' in msg for msg in error_msgs))
+        self.assertTrue(any('missing port name' in msg for msg in error_msgs))
+        self.assertTrue(any('device not found' in msg for msg in error_msgs))
+
+    def test_batch_add_duplicate_port(self):
+        # Add port first
+        Port.objects.create(
+            device=self.device,
+            port_num='8080',
+            protocol='TCP',
+            name='http',
+            product='nginx',
+            version='1.0',
+            first_seen=datetime.datetime.now(),
+            last_seen=datetime.datetime.now()
+        )
+        payload = {
+            'ports': [
+                {'mac': 'AA:BB:CC:DD:EE:10', 'port': '8080', 'protocol': 'TCP', 'name': 'http', 'version': '2.0', 'product': 'nginx2'}
+            ]
+        }
+        response = self.post_json(payload)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['success_count'], 1)
+        self.assertEqual(len(data['errors']), 0)
+        port = Port.objects.get(device=self.device, port_num='8080')
+        self.assertEqual(port.version, '2.0')
+        self.assertEqual(port.product, 'nginx2')
+
+    def test_batch_add_missing_ports_key(self):
+        response = self.post_json({'not_ports': []})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('ports', response.content.decode())
+
+    def test_batch_add_ports_not_list(self):
+        response = self.post_json({'ports': 'notalist'})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('must be a list', response.content.decode())
+
+    def test_batch_add_empty_list(self):
+        response = self.post_json({'ports': []})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['success_count'], 0)
+        self.assertEqual(len(data['errors']), 0)
+
+    def test_batch_add_all_invalid(self):
+        payload = {
+            'ports': [
+                {'mac': '', 'port': '', 'protocol': '', 'name': ''},
+                {'mac': 'AA:BB:CC:DD:EE:99', 'port': '9999', 'protocol': '', 'name': ''}
             ]
         }
         response = self.post_json(payload)

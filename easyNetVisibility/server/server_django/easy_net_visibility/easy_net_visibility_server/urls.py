@@ -14,5 +14,6 @@ urlpatterns = [
     path('api/addDevice', api_views.add_device, name="add_device"),
     path('api/addDevices', api_views.add_devices, name="add_devices"),
     path('api/addPort', api_views.add_port, name="add_port"),
+    path('api/addPorts', api_views.add_ports, name="add_ports"),
     path('api/sensorHealth', api_views.sensor_health, name="sensor_health")
 ]

@@ -150,74 +150,133 @@ def add_device(request):
         return _return_error(err, status=status_code, request=request)
 
 
+
 @api_view(['POST'])
 def add_port(request):
     # Use request.data for DRF, fallback to request.POST
     data = getattr(request, 'data', request.POST)
     mac = data.get('mac', '')
     port_num = data.get('port', '')
-    protocol = data.get('protocol', '')
-    name = data.get('name', '')
-    version = data.get('version', '')
-    product = data.get('product', '')
+
+    if mac:
+        mac = validators.convert_mac(mac)
+
+    devices = Device.objects.filter(mac=mac) if mac else None
+    existing_devices_map = {d.mac: d for d in devices} if devices else {}
+    ports = Port.objects.filter(device__mac=mac, port_num=port_num) if port_num and mac else None
+    existing_ports_map = {(p.device.mac, str(p.port_num)): p for p in ports} if ports else {}
+
+    code, err = _process_port(data, existing_devices_map, existing_ports_map)
+    if code == 200:
+        return _return_success('Port information processed', request=request)
+    else:
+        return _return_error(err, status=code, request=request)
+
+
+def _process_port(port_data, existing_devices_map, existing_ports_map):
+    """
+    Helper to add or update a port. Returns (status_code: int, error: str or None)
+    existing_devices_map: dict mapping mac -> Device
+    existing_ports_map: dict mapping (mac, port_num) -> Port
+    """
+    mac = port_data.get('mac', '')
+    port_num = port_data.get('port', '')
+    protocol = port_data.get('protocol', '')
+    name = port_data.get('name', '')
+    version = port_data.get('version', '') or 'Unknown'
+    product = port_data.get('product', '') or 'Unknown'
 
     if mac:
         mac = validators.convert_mac(mac)
     if len(mac) == 0:
-        return _return_error('missing mac address', status=400, request=request)
+        return 400, 'missing mac address'
     if len(port_num) == 0:
-        return _return_error('missing port number', status=400, request=request)
+        return 400, 'missing port number'
     if len(protocol) == 0:
-        return _return_error('missing protocol', status=400, request=request)
+        return 400, 'missing protocol'
     if len(name) == 0:
-        return _return_error('missing port name', status=400, request=request)
+        return 400, 'missing port name'
 
-    if len(version) == 0:
-        version = 'Unknown'
-    if len(product) == 0:
-        product = 'Unknown'
+    device = existing_devices_map.get(mac)
+    if not device:
+        return 400, 'device not found'
 
-    port_data = Port()
-    port_data.port_num = port_num
-    port_data.protocol = protocol
-    port_data.name = name
-    port_data.product = product
-    port_data.version = version
-    port_data.first_seen = datetime.datetime.now()
-    port_data.last_seen = datetime.datetime.now()
-
-    existing_devices = Device.objects.filter(mac=mac)
-    if len(existing_devices) == 0:
-        return _return_error('device not found', status=400, request=request)
-
-    existing_device = existing_devices[0]
-    port_data.device = existing_device
-
-    existing_ports = Port.objects.filter(device=existing_device, port_num=port_num)
-
-    if len(existing_ports) == 0:
+    key = (mac, str(port_num))
+    now = datetime.datetime.now()
+    if key not in existing_ports_map:
         try:
-            port_data.save()
-            return _return_success('port added', request=request)
+            port_obj = Port()
+            port_obj.device = device
+            port_obj.port_num = port_num
+            port_obj.protocol = protocol
+            port_obj.name = name
+            port_obj.product = product
+            port_obj.version = version
+            port_obj.first_seen = now
+            port_obj.last_seen = now
+            port_obj.save()
+            return 200, None
         except Exception as e:
             traceback.print_exc()
-            return _return_error('Error :' + str(e), request=request)
+            return 500, f'Error adding port: {str(e)}'
     else:
-        existing_port = existing_ports[0]
-        # TODO: only last seen is updated, should other information be updated as well?
-        now = datetime.datetime.now()
-
-        if (existing_port.last_seen is not None and
-                existing_port.last_seen > now - datetime.timedelta(minutes=_LAST_SEEN_THRESHOLD_MINUTES)):
-            return _return_success('no update needed', request=request)
+        port_obj = existing_ports_map[key]
+        # Only last_seen is updated, but optionally update other info if provided
+        if (port_obj.last_seen is not None and
+                port_obj.last_seen > now - datetime.timedelta(minutes=_LAST_SEEN_THRESHOLD_MINUTES)):
+            return 200, None
         else:
             try:
-                existing_port.last_seen = datetime.datetime.now()
-                existing_port.save()
-                return _return_success('port information updated', request=request)
+                port_obj.last_seen = now
+                # Optionally update other fields if provided
+                if protocol:
+                    port_obj.protocol = protocol
+                if name:
+                    port_obj.name = name
+                if product:
+                    port_obj.product = product
+                if version:
+                    port_obj.version = version
+                port_obj.save()
+                return 200, None
             except Exception as e:
                 traceback.print_exc()
-                return _return_error('Error :' + str(e), request=request)
+                return 500, f'Error updating port: {str(e)}'
+
+
+@api_view(['POST'])
+def add_ports(request):
+    # Only accept JSON
+    if not _client_expects_json(request):
+        return _return_error("Only JSON format supported for batch add.", status=400, request=request)
+    try:
+        raw_ports = request.data.get('ports', None)
+    except Exception:
+        return _return_error("Invalid JSON body.", status=400, request=request)
+    if not isinstance(raw_ports, list):
+        return _return_error("'ports' must be a list.", status=400, request=request)
+
+    macs = [validators.convert_mac(p.get('mac', '')) for p in raw_ports if p.get('mac', '')]
+    port_keys = [str(p.get('port', '')) for p in raw_ports if p.get('port', '')]
+
+    # Bulk fetch all relevant devices and ports
+    devices = Device.objects.filter(mac__in=macs)
+    existing_devices_map = {d.mac: d for d in devices}
+    ports = Port.objects.filter(device__mac__in=macs, port_num__in=[pk for pk in port_keys])
+    existing_ports_map = {(p.device.mac, str(p.port_num)): p for p in ports}
+
+    success_count = 0
+    errors = []
+    for idx, port_data in enumerate(raw_ports):
+        code, err = _process_port(port_data, existing_devices_map, existing_ports_map)
+        if code == 200:
+            success_count += 1
+        else:
+            errors.append({"index": idx, "error": err})
+    return JsonResponse({
+        "success_count": success_count,
+        "errors": errors
+    }, status=200)
 
 
 @api_view(['POST'])
