@@ -7,7 +7,8 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from .models import Device, Port
+from .models import Device
+from .models import Port
 
 
 class TestDeviceModel(TestCase):
@@ -207,6 +208,9 @@ class BaseDeviceApiTest(ABC, TestCase):
         self.skipTest("Abstract method not implemented")
 
     def setUp(self):
+        if 'BaseDeviceApiTest' in self.__class__.__name__:
+            self.skipTest("Abstract method not implemented")
+
         self.user = User.objects.create_user(username='apiuser', password='apipass')
         self.client = APIClient()
         self.client.login(username='apiuser', password='apipass')
@@ -284,10 +288,10 @@ class BaseDeviceApiTest(ABC, TestCase):
         }
         response1 = self.api_post('add_device', payload1)
         self.assertEqual(response1.status_code, 200)
-        self.assertIn(b'Device added', response1.content)
+        self.assertIn(b'Device information processed', response1.content)
         response2 = self.api_post('add_device', payload2)
         self.assertEqual(response2.status_code, 200)
-        self.assertIn(b'Device added', response2.content)
+        self.assertIn(b'Device information processed', response2.content)
         from .models import Device
         devices = Device.objects.all()
         self.assertEqual(devices.count(), 2)
@@ -296,7 +300,7 @@ class BaseDeviceApiTest(ABC, TestCase):
         self.assertIn('AABBCCDDEE02', macs)
         response3 = self.api_post('add_device', payload3)
         self.assertEqual(response3.status_code, 200)
-        self.assertIn(b'Device updated', response3.content)
+        self.assertIn(b'Device information processed', response3.content)
         devices = Device.objects.all()
         self.assertEqual(devices.count(), 2)
         dev1 = Device.objects.get(mac='AABBCCDDEE01')
@@ -463,3 +467,120 @@ class TestDeviceApiJson(BaseDeviceApiTest):
             format='json',
             **headers
         )
+
+
+class TestAddDevicesApi(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='batchuser', password='batchpass')
+        self.client = APIClient()
+        self.client.login(username='batchuser', password='batchpass')
+        # Get CSRF token for JSON requests
+        response = self.client.get(reverse('get_csrf_token'))
+        self.csrf_token = response.content.decode()
+        self.client.cookies['csrftoken'] = self.csrf_token
+        self.url = reverse('add_devices')
+
+    def post_json(self, payload):
+        return self.client.post(
+            self.url,
+            payload,
+            format='json',
+            HTTP_X_CSRFTOKEN=self.csrf_token,
+            HTTP_ACCEPT='application/json'
+        )
+
+    def test_only_accepts_json(self):
+        # Should fail with multipart
+        response = self.client.post(self.url, {'devices': []}, format='multipart', HTTP_X_CSRFTOKEN=self.csrf_token)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(b'Only JSON format supported', response.content)
+
+    def test_batch_add_all_valid(self):
+        payload = {
+            'devices': [
+                {'mac': 'AA:BB:CC:DD:EE:01', 'hostname': 'host1', 'ip': '10.0.0.1', 'vendor': 'V1'},
+                {'mac': 'AA:BB:CC:DD:EE:02', 'hostname': 'host2', 'ip': '10.0.0.2', 'vendor': 'V2'}
+            ]
+        }
+        response = self.post_json(payload)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['success_count'], 2)
+        self.assertEqual(len(data['errors']), 0)
+        from .models import Device
+        self.assertEqual(Device.objects.count(), 2)
+
+    def test_batch_add_some_invalid(self):
+        payload = {
+            'devices': [
+                {'mac': '', 'hostname': 'host1', 'ip': '10.0.0.1', 'vendor': 'V1'},  # missing MAC
+                {'mac': 'INVALIDMAC', 'hostname': 'host2', 'ip': '10.0.0.2', 'vendor': 'V2'},  # invalid MAC
+                {'mac': 'AA:BB:CC:DD:EE:03', 'hostname': 'host3', 'ip': '999.999.999.999', 'vendor': 'V3'},
+                # invalid IP
+                {'mac': 'AA:BB:CC:DD:EE:04', 'hostname': '!!!invalid!!!', 'ip': '10.0.0.4', 'vendor': 'V4'},
+                # invalid hostname
+                {'mac': 'AA:BB:CC:DD:EE:05', 'hostname': 'host5', 'ip': '10.0.0.5', 'vendor': 'V5'}  # valid
+            ]
+        }
+        response = self.post_json(payload)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['success_count'], 1)
+        self.assertEqual(len(data['errors']), 4)
+        error_msgs = [e['error'] for e in data['errors']]
+        self.assertTrue(any('Must Supply MAC Address' in msg for msg in error_msgs))
+        self.assertTrue(any('Invalid MAC Address' in msg for msg in error_msgs))
+        self.assertTrue(any('Invalid IP Address' in msg for msg in error_msgs))
+        self.assertTrue(any('Invalid Hostname' in msg for msg in error_msgs))
+        from .models import Device
+        self.assertEqual(Device.objects.count(), 1)
+        self.assertTrue(Device.objects.filter(mac='AABBCCDDEE05').exists())
+
+    def test_batch_add_duplicate_macs(self):
+        # Add device first
+        Device.objects.create(mac='AABBCCDDEE06', hostname='oldhost', ip='10.0.0.6', vendor='OldVendor',
+                              first_seen=datetime.datetime.now(), last_seen=datetime.datetime.now())
+        payload = {
+            'devices': [
+                {'mac': 'AA:BB:CC:DD:EE:06', 'hostname': 'newhost', 'ip': '10.0.0.66', 'vendor': 'NewVendor'}
+            ]
+        }
+        response = self.post_json(payload)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['success_count'], 1)
+        self.assertEqual(len(data['errors']), 0)
+        dev = Device.objects.get(mac='AABBCCDDEE06')
+        self.assertEqual(dev.hostname, 'newhost')
+        self.assertEqual(dev.ip, '10.0.0.66')
+        self.assertEqual(dev.vendor, 'NewVendor')
+
+    def test_batch_add_missing_devices_key(self):
+        response = self.post_json({'not_devices': []})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('devices', response.content.decode())
+
+    def test_batch_add_devices_not_list(self):
+        response = self.post_json({'devices': 'notalist'})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('must be a list', response.content.decode())
+
+    def test_batch_add_empty_list(self):
+        response = self.post_json({'devices': []})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['success_count'], 0)
+        self.assertEqual(len(data['errors']), 0)
+
+    def test_batch_add_all_invalid(self):
+        payload = {
+            'devices': [
+                {'mac': '', 'hostname': '', 'ip': '', 'vendor': ''},
+                {'mac': 'BADMAC', 'hostname': '', 'ip': '', 'vendor': ''}
+            ]
+        }
+        response = self.post_json(payload)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['success_count'], 0)
+        self.assertEqual(len(data['errors']), 2)

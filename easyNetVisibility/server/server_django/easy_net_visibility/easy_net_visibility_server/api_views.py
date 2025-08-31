@@ -14,7 +14,7 @@ from .models import Device, Port, Sensor
 # This is disabled because it didn't effect the performance in a meaningful way
 _LAST_SEEN_THRESHOLD_MINUTES = 0
 
-def client_expects_json(request):
+def _client_expects_json(request):
     # Accepts JSON if header or ?format=json
     accept = request.META.get('HTTP_ACCEPT', '')
     if 'application/json' in accept:
@@ -23,15 +23,20 @@ def client_expects_json(request):
         return True
     return False
 
-def read_device_details_from_request_body(request):
+def _read_device_details_from_request_body(request):
     # Use request.data for DRF, fallback to request.POST
     data = getattr(request, 'data', request.POST)
+    return _create_device_obj_from_data(data)
+
+
+def _create_device_obj_from_data(data) -> Device:
     hostname = data.get('hostname', '')
     ip = data.get('ip', '')
     mac = data.get('mac', '')
     vendor = data.get('vendor', '')
     if mac:
         mac = validators.convert_mac(mac)
+
     device = Device()
     device.hostname = hostname
     device.ip = ip
@@ -46,60 +51,103 @@ def read_device_details_from_request_body(request):
 @api_view(['GET', 'POST'])
 def get_csrf_token(request):
     if not getattr(settings, 'CSRF_PROTECTION_ENABLED', True):
-        if client_expects_json(request):
+        if _client_expects_json(request):
             return JsonResponse({"message": "NOT_REQUIRED"})
         return HttpResponse("NOT_REQUIRED")
 
     token = get_token(request)
-    if client_expects_json(request):
+    if _client_expects_json(request):
         return JsonResponse({"csrfToken": token})
     return HttpResponse(token)
 
 
-@api_view(['POST'])
-def add_device(request):
-    new_device_data = read_device_details_from_request_body(request)
-    mac = new_device_data.mac
-    if len(mac) == 0:
-        return return_error("Must Supply MAC Address", status=400, request=request)
-    if not validators.mac_address(mac):
-        return return_error("Invalid MAC Address", status=400, request=request)
-    ip = new_device_data.ip
-    if len(ip) > 0 and not validators.ip_address(ip):
-        return return_error("Invalid IP Address", status=400, request=request)
-    hostname = new_device_data.hostname
-    if len(hostname) > 0 and not validators.hostname(hostname):
-        return return_error("Invalid Hostname", status=400, request=request)
-
-    existing_devices = Device.objects.filter(mac=mac)
-
-    if len(existing_devices) == 0:
+def _process_device(device: Device, existing_devices_map):
+    """
+    Helper to add or update a device. Returns (status_code: int, error: str or None)
+    existing_devices_map: dict mapping mac -> Device
+    """
+    if len(device.mac) == 0:
+        return 400, "Must Supply MAC Address"
+    if not validators.mac_address(device.mac):
+        return 400, "Invalid MAC Address"
+    if len(device.ip) > 0 and not validators.ip_address(device.ip):
+        return 400, "Invalid IP Address"
+    if len(device.hostname) > 0 and not validators.hostname(device.hostname):
+        return 400, "Invalid Hostname"
+    now = datetime.datetime.now()
+    if device.mac not in existing_devices_map:
         try:
-            new_device_data.save()
-            return return_success("Device added", request=request)
+            device.save()
+            return 200, None
         except Exception as e:
             traceback.print_exc()
-            return return_error('Error adding device:' + str(e), request=request)
+            return 500, f"Error adding device: {str(e)}"
     else:
-        # device already exists
-        existing_device = existing_devices[0]
-        now = datetime.datetime.now()
+        existing_device = existing_devices_map.get(device.mac)
 
-        if (existing_device.hostname == hostname and
-                existing_device.ip == ip and
+        if (existing_device.hostname == device.hostname and
+                existing_device.ip == device.ip and
                 existing_device.last_seen is not None and
                 existing_device.last_seen > now - datetime.timedelta(minutes=_LAST_SEEN_THRESHOLD_MINUTES)):
-            return return_success("No update needed", request=request)
+            return 200, None
         else:
             try:
-                existing_device.hostname = hostname
-                existing_device.ip = ip
-                existing_device.last_seen = datetime.datetime.now()
+                existing_device.hostname = device.hostname
+                existing_device.ip = device.ip
+
+                # Only update vendor if provided, to avoid overwriting with empty value
+                if device.vendor:
+                    existing_device.vendor = device.vendor
+
+                existing_device.last_seen = now
                 existing_device.save()
-                return return_success("Device updated", request=request)
+                return 200, None
             except Exception as e:
                 traceback.print_exc()
-                return return_error('Error updating device:' + str(e), request=request)
+                return 500, f"Error updating device: {str(e)}"
+
+
+@api_view(['POST'])
+def add_devices(request):
+    # Only accept JSON
+    if not _client_expects_json(request):
+        return _return_error("Only JSON format supported for batch add.", status=400, request=request)
+    try:
+        raw_devices = request.data.get('devices', None)
+    except Exception:
+        return _return_error("Invalid JSON body.", status=400, request=request)
+    if not isinstance(raw_devices, list):
+        return _return_error("'devices' must be a list.", status=400, request=request)
+
+    devices = [_create_device_obj_from_data(device_data) for device_data in raw_devices]
+    existing_devices = Device.objects.filter(mac__in=[d.mac for d in devices if d.mac])
+    existing_devices_map = {d.mac: d for d in existing_devices}
+
+    success_count = 0
+    errors = []
+    for idx, device_obj in enumerate(devices):
+        response_code, err = _process_device(device_obj, existing_devices_map)
+        if response_code == 200:
+            success_count += 1
+        else:
+            errors.append({"index": idx, "error": err})
+    return JsonResponse({
+        "success_count": success_count,
+        "errors": errors
+    }, status=200)
+
+
+@api_view(['POST'])
+def add_device(request):
+    device_obj = _read_device_details_from_request_body(request)
+    # Fetch existing device for this MAC
+    existing_devices = Device.objects.filter(mac=device_obj.mac) if device_obj.mac else None
+    existing_devices_map = {d.mac: d for d in existing_devices} if existing_devices else {}
+    status_code, err = _process_device(device_obj, existing_devices_map)
+    if status_code == 200:
+        return _return_success("Device information processed", request=request)
+    else:
+        return _return_error(err, status=status_code, request=request)
 
 
 @api_view(['POST'])
@@ -116,13 +164,13 @@ def add_port(request):
     if mac:
         mac = validators.convert_mac(mac)
     if len(mac) == 0:
-        return return_error('missing mac address', status=400, request=request)
+        return _return_error('missing mac address', status=400, request=request)
     if len(port_num) == 0:
-        return return_error('missing port number', status=400, request=request)
+        return _return_error('missing port number', status=400, request=request)
     if len(protocol) == 0:
-        return return_error('missing protocol', status=400, request=request)
+        return _return_error('missing protocol', status=400, request=request)
     if len(name) == 0:
-        return return_error('missing port name', status=400, request=request)
+        return _return_error('missing port name', status=400, request=request)
 
     if len(version) == 0:
         version = 'Unknown'
@@ -140,7 +188,7 @@ def add_port(request):
 
     existing_devices = Device.objects.filter(mac=mac)
     if len(existing_devices) == 0:
-        return return_error('device not found', status=400, request=request)
+        return _return_error('device not found', status=400, request=request)
 
     existing_device = existing_devices[0]
     port_data.device = existing_device
@@ -150,10 +198,10 @@ def add_port(request):
     if len(existing_ports) == 0:
         try:
             port_data.save()
-            return return_success('port added', request=request)
+            return _return_success('port added', request=request)
         except Exception as e:
             traceback.print_exc()
-            return return_error('Error :' + str(e), request=request)
+            return _return_error('Error :' + str(e), request=request)
     else:
         existing_port = existing_ports[0]
         # TODO: only last seen is updated, should other information be updated as well?
@@ -161,15 +209,15 @@ def add_port(request):
 
         if (existing_port.last_seen is not None and
                 existing_port.last_seen > now - datetime.timedelta(minutes=_LAST_SEEN_THRESHOLD_MINUTES)):
-            return return_success('no update needed', request=request)
+            return _return_success('no update needed', request=request)
         else:
             try:
                 existing_port.last_seen = datetime.datetime.now()
                 existing_port.save()
-                return return_success('port information updated', request=request)
+                return _return_success('port information updated', request=request)
             except Exception as e:
                 traceback.print_exc()
-                return return_error('Error :' + str(e), request=request)
+                return _return_error('Error :' + str(e), request=request)
 
 
 @api_view(['POST'])
@@ -180,9 +228,9 @@ def sensor_health(request):
     sensor_hostname = data.get('hostname', '')
 
     if len(sensor_mac) == 0:
-        return return_error('Unknown Sensor MAC', status=400, request=request)
+        return _return_error('Unknown Sensor MAC', status=400, request=request)
     if len(sensor_hostname) == 0:
-        return return_error('unknown sensor Hostname', status=400, request=request)
+        return _return_error('unknown sensor Hostname', status=400, request=request)
 
     sensor_info = Sensor()
     sensor_info.mac = sensor_mac
@@ -196,7 +244,7 @@ def sensor_health(request):
             sensor_info.save()
         except Exception as e:
             traceback.print_exc()
-            return return_error('Error :' + str(e), request=request)
+            return _return_error('Error :' + str(e), request=request)
     else:
         try:
             sensor = sensors[0]
@@ -205,18 +253,18 @@ def sensor_health(request):
             sensor.save()
         except Exception as e:
             traceback.print_exc()
-            return return_error('Error :' + str(e), request=request)
+            return _return_error('Error :' + str(e), request=request)
 
-    return return_success('sensor information updated', request=request)
+    return _return_success('sensor information updated', request=request)
 
 
-def return_success(message, request=None):
-    if request is not None and client_expects_json(request):
+def _return_success(message, request=None):
+    if request is not None and _client_expects_json(request):
         return JsonResponse({"message": message})
     return Response({"message": message})
 
 
-def return_error(message, status=500, request=None):
-    if request is not None and client_expects_json(request):
+def _return_error(message, status=500, request=None):
+    if request is not None and _client_expects_json(request):
         return JsonResponse({'error': message}, status=status)
     return Response({'error': message}, status=status)

@@ -12,6 +12,7 @@ urlpatterns = [
 
     path('api/csrf', api_views.get_csrf_token, name="get_csrf_token"),
     path('api/addDevice', api_views.add_device, name="add_device"),
+    path('api/addDevices', api_views.add_devices, name="add_devices"),
     path('api/addPort', api_views.add_port, name="add_port"),
     path('api/sensorHealth', api_views.sensor_health, name="sensor_health")
 ]
