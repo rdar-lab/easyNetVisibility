@@ -1,29 +1,30 @@
 # Exclude test files from Docker image
-tests/
-**/test_*.py
-**/*_test.py
+# Note: Docker build context is at client/, so paths are relative to that
+tests/**
+test_*.py
+*_test.py
 
 # Python cache
-__pycache__/
+**/__pycache__
 *.pyc
 *.pyo
 *.pyd
 .Python
 
 # Virtual environments
-.venv/
-venv/
-ENV/
+.venv
+venv
+ENV
 
 # IDE
-.vscode/
-.idea/
+.vscode
+.idea
 *.swp
 *.swo
 
 # Git
-.git/
+.git
 .gitignore
 
 # CI/CD
-.github/
+.github
