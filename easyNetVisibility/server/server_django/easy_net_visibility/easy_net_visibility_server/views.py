@@ -3,13 +3,54 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from .models import Device, Port, Sensor
 from django.contrib.messages import add_message, constants
+import ipaddress
+from collections import defaultdict
+
+
+def get_subnet(ip_address, prefix_length=24):
+    """
+    Calculate the subnet for a given IP address.
+    Uses /24 (255.255.255.0) as default subnet mask.
+    Returns subnet in CIDR notation (e.g., '192.168.1.0/24').
+    Returns 'unknown' for invalid or empty IP addresses.
+    """
+    try:
+        network = ipaddress.ip_network(f"{ip_address}/{prefix_length}", strict=False)
+        return str(network)
+    except (ValueError, ipaddress.AddressValueError):
+        # If IP is invalid or empty, return a default group
+        return "unknown"
 
 
 @login_required
 def home(request):
     devices_list = Device.objects.prefetch_related('port_set').order_by('ip')
     visible_devices = [device for device in devices_list if not device.is_hidden()]
-    return render(request, 'home.html', {'deviceList': visible_devices})
+    
+    # Group devices by subnet
+    devices_by_subnet = defaultdict(list)
+    for device in visible_devices:
+        subnet = get_subnet(device.ip)
+        devices_by_subnet[subnet].append(device)
+    
+    # Convert to sorted list of tuples (subnet, devices) for template
+    # Sort by network address for proper ordering
+    def sort_key(item):
+        subnet_str = item[0]
+        if subnet_str == "unknown":
+            # Put unknown subnets at the end
+            return (1, subnet_str)
+        try:
+            return (0, ipaddress.ip_network(subnet_str))
+        except (ValueError, ipaddress.AddressValueError):
+            return (1, subnet_str)
+    
+    grouped_devices = sorted(devices_by_subnet.items(), key=sort_key)
+    
+    return render(request, 'home.html', {
+        'deviceList': visible_devices,
+        'groupedDevices': grouped_devices
+    })
 
 
 @login_required
