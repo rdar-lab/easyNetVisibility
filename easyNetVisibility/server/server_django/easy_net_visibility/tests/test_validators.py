@@ -1,5 +1,11 @@
 import unittest
-from . import validators
+import sys
+import os
+
+# Add the Django app to the path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'easy_net_visibility'))
+
+from easy_net_visibility_server import validators
 
 
 class TestMacAddressValidator(unittest.TestCase):

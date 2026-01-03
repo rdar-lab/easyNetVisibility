@@ -1,7 +1,7 @@
 import datetime
 from django.test import TestCase
 from django.utils import timezone
-from .models import Sensor
+from easy_net_visibility_server.models import Sensor
 
 
 class TestSensorModel(TestCase):

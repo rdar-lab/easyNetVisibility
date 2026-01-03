@@ -71,25 +71,26 @@ After the deployment the sensor will immediately start scanning for devices and 
 
 ### Running Tests Locally
 
-The project includes comprehensive unit tests for both server and client components.
+The project includes comprehensive unit tests for both server and client components. **Test files are stored in separate `tests/` directories and are not included in production Docker images.**
 
 #### Server Tests (Django)
 
 To run the Django server tests:
 
 ```bash
-cd easyNetVisibility/server/server_django/easy_net_visibility
+cd easyNetVisibility/server/server_django
 
 # Install dependencies
-pip install -r ../requirements.txt
+pip install -r requirements.txt
 
-# Run all tests
+# Run all tests (from the server_django directory)
+cd easy_net_visibility
 python manage.py test
 
-# Run specific test files
+# Run specific test modules
+python manage.py test tests.test_validators
+python manage.py test tests.test_sensor_model
 python manage.py test easy_net_visibility_server.tests
-python manage.py test easy_net_visibility_server.test_validators
-python manage.py test easy_net_visibility_server.test_sensor_model
 
 # Run with verbosity
 python manage.py test --verbosity=2
@@ -104,18 +105,15 @@ cd easyNetVisibility/client
 
 # Install dependencies
 pip install -r requirements.txt
-pip install pytest pytest-cov pytest-mock
+pip install pytest pytest-mock
 
 # Run all tests
-pytest -v
+pytest tests/ -v
 
 # Run specific test files
-pytest test_network_utils.py -v
-pytest test_server_api.py -v
-pytest test_nmap.py -v
-
-# Run with coverage report
-pytest --cov=sensor --cov-report=term --cov-report=html
+pytest tests/test_network_utils.py -v
+pytest tests/test_server_api.py -v
+pytest tests/test_nmap.py -v
 ```
 
 ### Continuous Integration
@@ -124,8 +122,7 @@ Tests are automatically run via GitHub Actions on every push and pull request. T
 
 1. Runs Django server tests (120+ tests total including existing tests)
 2. Runs client sensor tests (42+ tests)
-3. Generates coverage reports
-4. Reports test results
+3. Reports test results
 
 You can view the test results in the Actions tab of the GitHub repository.
 

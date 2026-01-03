@@ -1,0 +1,30 @@
+# Exclude test files from Docker image
+easy_net_visibility/tests/
+tests/
+**/test_*.py
+**/*_test.py
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# CI/CD
+.github/

@@ -6,7 +6,7 @@ import tempfile
 import xml.etree.ElementTree as ET
 
 # Add the sensor directory to Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'sensor'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'sensor'))
 
 import nmap
 
