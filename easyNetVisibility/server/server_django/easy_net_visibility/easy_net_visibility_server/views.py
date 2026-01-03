@@ -14,7 +14,6 @@ def get_subnet(ip_address, prefix_length=24):
     Returns subnet in CIDR notation (e.g., '192.168.1.0/24').
     """
     try:
-        ip = ipaddress.ip_address(ip_address)
         network = ipaddress.ip_network(f"{ip_address}/{prefix_length}", strict=False)
         return str(network)
     except (ValueError, ipaddress.AddressValueError):
@@ -34,8 +33,18 @@ def home(request):
         devices_by_subnet[subnet].append(device)
     
     # Convert to sorted list of tuples (subnet, devices) for template
-    # Sort by subnet to ensure consistent ordering
-    grouped_devices = sorted(devices_by_subnet.items(), key=lambda x: x[0])
+    # Sort by network address for proper ordering
+    def sort_key(item):
+        subnet_str = item[0]
+        if subnet_str == "unknown":
+            # Put unknown subnets at the end
+            return (1, subnet_str)
+        try:
+            return (0, ipaddress.ip_network(subnet_str))
+        except (ValueError, ipaddress.AddressValueError):
+            return (1, subnet_str)
+    
+    grouped_devices = sorted(devices_by_subnet.items(), key=sort_key)
     
     return render(request, 'home.html', {
         'deviceList': visible_devices,
