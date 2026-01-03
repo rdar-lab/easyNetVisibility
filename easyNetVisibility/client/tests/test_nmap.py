@@ -1,8 +1,7 @@
 import unittest
-from unittest.mock import patch, MagicMock, mock_open
+from unittest.mock import patch, MagicMock
 import sys
 import os
-import tempfile
 import xml.etree.ElementTree as ET
 
 # Add the sensor directory to Python path
@@ -76,6 +75,9 @@ class TestPingSweep(unittest.TestCase):
         # Check that found_devices was populated
         self.assertEqual(len(nmap._found_devices), 2)
         self.assertEqual(nmap._found_devices['AABBCCDDEEFF'], '192.168.1.1')
+        
+        # Verify that os.system was called to clean up the XML file
+        mock_system.assert_called_once()
 
     @patch('os.system')
     @patch('os.path.exists')
@@ -116,6 +118,8 @@ class TestPingSweep(unittest.TestCase):
         
         # Should be empty since device has no MAC
         self.assertEqual(len(result), 0)
+        # Verify _found_devices is also empty
+        self.assertEqual(len(nmap._found_devices), 0)
 
     @patch('os.system')
     @patch('os.path.exists')
@@ -178,7 +182,9 @@ class TestPingSweep(unittest.TestCase):
         with patch('os.makedirs') as mock_makedirs:
             try:
                 nmap.ping_sweep()
-            except:
+            except Exception:
+                # ping_sweep is expected to raise due to the mocked parse failure;
+                # ignore the exception here since this test only verifies directory creation.
                 pass
             
             mock_makedirs.assert_called_once_with('/opt/easy_net_visibility/client/nmap_scans')
@@ -292,7 +298,9 @@ class TestPortScan(unittest.TestCase):
         with patch('os.makedirs') as mock_makedirs:
             try:
                 list(nmap.port_scan())
-            except:
+            except Exception:
+                # port_scan is expected to raise due to the mocked parse failure;
+                # ignore the exception here since this test only verifies directory creation.
                 pass
             
             mock_makedirs.assert_called_once_with('/opt/easy_net_visibility/client/nmap_scans')

@@ -120,9 +120,9 @@ pytest tests/test_nmap.py -v
 
 Tests are automatically run via GitHub Actions on every push and pull request. The CI pipeline:
 
-1. Runs Django server tests (120+ tests total including existing tests)
-2. Runs client sensor tests (42+ tests)
-3. Reports test results
+1. Runs Django server tests (122 tests)
+2. Runs client sensor tests (42 tests)
+3. Reports test results (164 tests total: 122 server + 42 client)
 
 You can view the test results in the Actions tab of the GitHub repository.
 

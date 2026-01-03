@@ -102,6 +102,11 @@ jobs:
         echo "Server tests: ${{ needs.test-server.result }}"
         echo "Client tests: ${{ needs.test-client.result }}"
         
+        if [ "${{ needs.test-server.result }}" == "cancelled" ] || [ "${{ needs.test-client.result }}" == "cancelled" ]; then
+          echo "Tests were cancelled"
+          exit 1
+        fi
+        
         if [ "${{ needs.test-server.result }}" != "success" ] || [ "${{ needs.test-client.result }}" != "success" ]; then
           echo "One or more test jobs failed"
           exit 1

@@ -1,7 +1,9 @@
 # Exclude test files from Docker image
-# Note: Docker build context is at server_django/, so paths are relative to that
+# Note: These patterns assume docker build is run with server_django/ as the build context,
+# e.g. `docker build -f server_django/Dockerfile server_django/`; paths below are relative to that context.
 easy_net_visibility/tests/**
 easy_net_visibility/**/test_*.py
+# Include *_test.py pattern for potential alternative test naming convention
 easy_net_visibility/**/*_test.py
 tests.py
 test_*.py

@@ -11,12 +11,27 @@ import server_api
 
 class TestServerApiInit(unittest.TestCase):
     def setUp(self):
+        # Store original values
+        self._original_address = server_api._server_api_address
+        self._original_username = server_api._server_username
+        self._original_password = server_api._server_password
+        self._original_validate = server_api._validate_server_identity
+        self._original_timeout = server_api._call_timeout
+        
         # Reset module state
         server_api._server_api_address = ''
         server_api._server_username = None
         server_api._server_password = None
         server_api._validate_server_identity = False
         server_api._call_timeout = None
+
+    def tearDown(self):
+        # Restore original values
+        server_api._server_api_address = self._original_address
+        server_api._server_username = self._original_username
+        server_api._server_password = self._original_password
+        server_api._validate_server_identity = self._original_validate
+        server_api._call_timeout = self._original_timeout
 
     def test_init_with_authentication(self):
         server_api.init('https://server.com', 'user', 'pass', True, 30)

@@ -2,7 +2,6 @@
 # Note: Docker build context is at client/, so paths are relative to that
 tests/**
 test_*.py
-*_test.py
 
 # Python cache
 **/__pycache__

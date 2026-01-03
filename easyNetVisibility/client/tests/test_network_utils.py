@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch, MagicMock, mock_open
+from unittest.mock import patch, mock_open
 import sys
 import os
 
@@ -71,7 +71,8 @@ class TestGetIp(unittest.TestCase):
 
     @patch('socket.socket')
     @patch('fcntl.ioctl')
-    def test_get_ip_with_interface(self, mock_ioctl, mock_socket):
+    def test_get_ip_returns_correct_address_when_interface_set(self, mock_ioctl, mock_socket):
+        """Test get_ip uses ioctl to fetch IP address when interface is set"""
         network_utils.init('eth0')
         mock_ioctl.return_value = b'\x00' * 20 + b'\xc0\xa8\x01\x64'  # 192.168.1.100
         result = network_utils.get_ip()

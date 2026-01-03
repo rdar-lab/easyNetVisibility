@@ -90,6 +90,8 @@ class TestHostnameValidator(unittest.TestCase):
         self.assertTrue(validators.hostname('sub.example.com'))
         self.assertTrue(validators.hostname('my-host'))
         self.assertTrue(validators.hostname('host123'))
+        # Note: underscores are not valid in RFC 952/1123 hostnames, but are
+        # intentionally allowed here for internal naming compatibility.
         self.assertTrue(validators.hostname('test_host'))
         self.assertTrue(validators.hostname('192-168-1-1'))
 
@@ -140,3 +142,7 @@ class TestUrlValidator(unittest.TestCase):
 
     def test_invalid_url_single_char(self):
         self.assertFalse(validators.url('a'))
+
+    def test_valid_url_minimal(self):
+        """Test minimal valid URL format (3+ chars per segment)"""
+        self.assertTrue(validators.url('aaa.bbb'))
