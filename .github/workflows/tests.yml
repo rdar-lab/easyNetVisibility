@@ -7,10 +7,16 @@ on:
     branches: [ main, master, develop ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   test-server:
     name: Django Server Tests
     runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
     
     defaults:
       run:
@@ -64,6 +70,9 @@ jobs:
     name: Client Tests
     runs-on: ubuntu-latest
     
+    permissions:
+      contents: read
+    
     defaults:
       run:
         working-directory: easyNetVisibility/client
@@ -107,6 +116,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test-server, test-client]
     if: always()
+    
+    permissions:
+      contents: read
     
     steps:
     - name: Check test results
