@@ -9,6 +9,7 @@ from rest_framework.test import APIClient
 
 from .models import Device
 from .models import Port
+from .views import get_subnet
 
 
 class TestDeviceModel(TestCase):
@@ -38,6 +39,22 @@ class TestDeviceModel(TestCase):
     def test_str_method(self):
         self.assertIn('TestDevice', str(self.device))
         self.assertIn('192.168.1.2', str(self.device))
+
+
+class TestSubnetCalculation(TestCase):
+    def test_get_subnet_standard_ip(self):
+        self.assertEqual(get_subnet('192.168.1.100'), '192.168.1.0/24')
+        self.assertEqual(get_subnet('10.0.0.5'), '10.0.0.0/24')
+        self.assertEqual(get_subnet('172.16.5.20'), '172.16.5.0/24')
+
+    def test_get_subnet_different_prefix(self):
+        self.assertEqual(get_subnet('192.168.1.100', 16), '192.168.0.0/16')
+        self.assertEqual(get_subnet('10.0.0.5', 8), '10.0.0.0/8')
+
+    def test_get_subnet_invalid_ip(self):
+        self.assertEqual(get_subnet('invalid'), 'unknown')
+        self.assertEqual(get_subnet(''), 'unknown')
+        self.assertEqual(get_subnet('999.999.999.999'), 'unknown')
 
 
 class TestPortModel(TestCase):
@@ -88,6 +105,50 @@ class TestDeviceView(TestCase):
         self.assertIn('ViewDevice', response_content)
         self.assertIn('10.0.0.1', response_content)  # Check if IP is displayed
         self.assertIn('AABBCCDDEE22', response_content)  # Check if MAC is displayed
+
+    def test_home_view_groups_by_subnet(self):
+        # Create devices in different subnets
+        Device.objects.create(
+            nickname='Device1',
+            hostname='host1',
+            ip='192.168.1.10',
+            mac='AABBCCDDEE01',
+            vendor='Vendor1',
+            first_seen=timezone.now(),
+            last_seen=timezone.now()
+        )
+        Device.objects.create(
+            nickname='Device2',
+            hostname='host2',
+            ip='192.168.1.20',
+            mac='AABBCCDDEE02',
+            vendor='Vendor2',
+            first_seen=timezone.now(),
+            last_seen=timezone.now()
+        )
+        Device.objects.create(
+            nickname='Device3',
+            hostname='host3',
+            ip='192.168.2.10',
+            mac='AABBCCDDEE03',
+            vendor='Vendor3',
+            first_seen=timezone.now(),
+            last_seen=timezone.now()
+        )
+        
+        response = self.client.get(reverse('home'))
+        response_content = response.content.decode()
+        self.assertEqual(response.status_code, 200)
+        
+        # Check that subnet headers are present
+        self.assertIn('Subnet:', response_content)
+        self.assertIn('192.168.1.0/24', response_content)
+        self.assertIn('192.168.2.0/24', response_content)
+        
+        # Check that devices are displayed
+        self.assertIn('Device1', response_content)
+        self.assertIn('Device2', response_content)
+        self.assertIn('Device3', response_content)
 
     def test_rename_device(self):
         response = self.client.post(reverse('rename_device'), {
