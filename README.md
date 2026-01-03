@@ -66,3 +66,83 @@ docker run \
 
 
 After the deployment the sensor will immediately start scanning for devices and feeding the information to the server.
+
+## Development and Testing
+
+### Running Tests Locally
+
+The project includes comprehensive unit tests for both server and client components.
+
+#### Server Tests (Django)
+
+To run the Django server tests:
+
+```bash
+cd easyNetVisibility/server/server_django/easy_net_visibility
+
+# Install dependencies
+pip install -r ../requirements.txt
+
+# Run all tests
+python manage.py test
+
+# Run specific test files
+python manage.py test easy_net_visibility_server.tests
+python manage.py test easy_net_visibility_server.test_validators
+python manage.py test easy_net_visibility_server.test_sensor_model
+
+# Run with verbosity
+python manage.py test --verbosity=2
+```
+
+#### Client Tests (Python/Pytest)
+
+To run the client sensor tests:
+
+```bash
+cd easyNetVisibility/client
+
+# Install dependencies
+pip install -r requirements.txt
+pip install pytest pytest-cov pytest-mock
+
+# Run all tests
+pytest -v
+
+# Run specific test files
+pytest test_network_utils.py -v
+pytest test_server_api.py -v
+pytest test_nmap.py -v
+
+# Run with coverage report
+pytest --cov=sensor --cov-report=term --cov-report=html
+```
+
+### Continuous Integration
+
+Tests are automatically run via GitHub Actions on every push and pull request. The CI pipeline:
+
+1. Runs Django server tests (120+ tests total including existing tests)
+2. Runs client sensor tests (42+ tests)
+3. Generates coverage reports
+4. Reports test results
+
+You can view the test results in the Actions tab of the GitHub repository.
+
+### Test Coverage
+
+The test suite covers:
+
+**Server Components:**
+- Device, Port, and Sensor models
+- API views (CSRF, device/port CRUD, batch operations)
+- Validators (MAC address, IP address, hostname, URL)
+- Authentication and permissions
+- Error handling and edge cases
+
+**Client Components:**
+- Network utilities (IP/MAC detection, network interfaces)
+- Server API client (authentication, CSRF, HTTP operations)
+- Nmap integration (ping sweep, port scanning, XML parsing)
+- Error handling and edge cases
+
