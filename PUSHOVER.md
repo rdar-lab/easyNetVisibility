@@ -56,40 +56,38 @@ When a new device is detected on the network (added via the API), a Pushover not
 - IP address
 - MAC address
 
-### Gateway Timeout Monitoring
+### Gateway Timeout and Device Offline Monitoring
 
-To monitor gateway timeouts and device offline status, you need to run the monitoring command periodically. This can be done using cron or a similar scheduler.
+The monitoring service runs automatically as a background thread when the Django server starts. It checks for gateway timeouts and device offline events every 5 minutes by default.
 
-#### Running the Monitoring Command
+**No additional setup is required** - monitoring starts automatically with the server.
+
+#### How It Works
+
+- The monitoring service starts automatically when Django initializes
+- Runs as a daemon thread in the background
+- Checks every 5 minutes for:
+  - Gateways (sensors) that haven't reported in
+  - Devices with nicknames that have gone offline
+- Survives across container restarts using database-persisted state
+- Works in both standalone and Kubernetes deployments
+
+#### Manual Monitoring (Optional)
+
+If you need to trigger a manual check or prefer to run monitoring separately, you can use the management command:
 
 ```bash
 # Navigate to the Django app directory (adjust path to your installation)
 cd /path/to/easyNetVisibility/server/server_django/easy_net_visibility
 
-# Run the monitoring command
+# Run the monitoring command manually
 python manage.py monitor_network
 ```
 
-#### Setting up Automated Monitoring with Cron
-
-Add a cron job to run the monitoring command every 5-10 minutes:
-
-```bash
-# Edit crontab
-crontab -e
-
-# Add this line to check every 5 minutes (adjust path to your installation)
-*/5 * * * * cd /path/to/easyNetVisibility/server/server_django/easy_net_visibility && python manage.py monitor_network >> /var/log/network_monitor.log 2>&1
-```
-
-For Docker deployments, you can run the command inside the container:
-
-```bash
-# Add to crontab on the host
-*/5 * * * * docker exec server python manage.py monitor_network >> /var/log/network_monitor.log 2>&1
-```
-
-Alternatively, you can add a supervisor configuration to run the monitoring as a periodic task.
+This is useful for:
+- Testing notifications
+- Running monitoring independently
+- Troubleshooting issues
 
 ### Device Offline Alerts
 
