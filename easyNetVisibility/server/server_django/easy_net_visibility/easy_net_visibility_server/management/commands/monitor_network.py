@@ -19,8 +19,6 @@ class Command(BaseCommand):
     def __init__(self):
         super().__init__()
         self.notifier = get_notifier()
-        self.notified_sensors = set()  # Track which sensors we've already notified about
-        self.notified_devices = set()  # Track which devices we've already notified about
 
     def handle(self, *args, **options):
         """Main command handler."""
@@ -47,23 +45,30 @@ class Command(BaseCommand):
         offline_sensors = Sensor.objects.filter(last_seen__lt=timeout_threshold)
         
         for sensor in offline_sensors:
-            sensor_key = sensor.mac
+            # Check if we've already notified about this sensor being offline
+            # Only notify again if it's been offline for at least 24 hours since last notification
+            should_notify = (
+                sensor.last_notified_timeout is None or
+                sensor.last_notified_timeout < timezone.now() - datetime.timedelta(hours=24)
+            )
             
-            # Only notify once per sensor until it comes back online
-            if sensor_key not in self.notified_sensors:
+            if should_notify:
                 minutes_offline = sensor.time_since_last_seen()
                 self.notifier.notify_gateway_timeout(sensor.hostname or sensor.mac, minutes_offline)
-                self.notified_sensors.add(sensor_key)
+                sensor.last_notified_timeout = timezone.now()
+                sensor.save(update_fields=['last_notified_timeout'])
                 self.stdout.write(
                     self.style.WARNING(
                         f"Gateway timeout: {sensor.hostname} ({sensor.mac}) - {minutes_offline} minutes offline"
                     )
                 )
         
-        # Clear notifications for sensors that are back online
-        online_sensors = Sensor.objects.filter(last_seen__gte=timeout_threshold)
-        for sensor in online_sensors:
-            self.notified_sensors.discard(sensor.mac)
+        # Clear notification timestamps for sensors that are back online
+        online_sensors = Sensor.objects.filter(
+            last_seen__gte=timeout_threshold,
+            last_notified_timeout__isnull=False
+        )
+        online_sensors.update(last_notified_timeout=None)
 
     def _check_device_offline(self):
         """Check if any devices have gone offline."""
@@ -82,20 +87,27 @@ class Command(BaseCommand):
         ).exclude(nickname__isnull=True).exclude(nickname='')
         
         for device in offline_devices:
-            device_key = device.mac
+            # Check if we've already notified about this device being offline
+            # Only notify again if it's been offline for at least 24 hours since last notification
+            should_notify = (
+                device.last_notified_offline is None or
+                device.last_notified_offline < timezone.now() - datetime.timedelta(hours=24)
+            )
             
-            # Only notify once per device until it comes back online
-            if device_key not in self.notified_devices:
+            if should_notify:
                 device_name = device.name() or device.mac
                 self.notifier.notify_device_offline(device_name, device.ip, device.mac)
-                self.notified_devices.add(device_key)
+                device.last_notified_offline = timezone.now()
+                device.save(update_fields=['last_notified_offline'])
                 self.stdout.write(
                     self.style.WARNING(
                         f"Device offline: {device_name} ({device.ip}) - {device.mac}"
                     )
                 )
         
-        # Clear notifications for devices that are back online
-        online_devices = Device.objects.filter(last_seen__gte=offline_threshold)
-        for device in online_devices:
-            self.notified_devices.discard(device.mac)
+        # Clear notification timestamps for devices that are back online
+        online_devices = Device.objects.filter(
+            last_seen__gte=offline_threshold,
+            last_notified_offline__isnull=False
+        )
+        online_devices.update(last_notified_offline=None)

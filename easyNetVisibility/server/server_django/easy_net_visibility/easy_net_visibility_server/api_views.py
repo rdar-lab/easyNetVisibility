@@ -92,8 +92,7 @@ def _process_device(device: Device, existing_devices_map):
                 _logger.error(f"Failed to send new device notification: {e}")
             return 200, None
         except Exception as e:
-            _logger.error(f"Error adding device: {e}")
-            traceback.print_exc()
+            _logger.exception(f"Error adding device: {e}")
             return 500, f"Error adding device: {str(e)}"
     else:
         existing_device = existing_devices_map.get(device.mac)

@@ -63,8 +63,8 @@ To monitor gateway timeouts and device offline status, you need to run the monit
 #### Running the Monitoring Command
 
 ```bash
-# Navigate to the Django app directory
-cd /opt/app/easy_net_visibility
+# Navigate to the Django app directory (adjust path to your installation)
+cd /path/to/easyNetVisibility/server/server_django/easy_net_visibility
 
 # Run the monitoring command
 python manage.py monitor_network
@@ -78,8 +78,8 @@ Add a cron job to run the monitoring command every 5-10 minutes:
 # Edit crontab
 crontab -e
 
-# Add this line to check every 5 minutes
-*/5 * * * * cd /opt/app/easy_net_visibility && python manage.py monitor_network >> /var/log/network_monitor.log 2>&1
+# Add this line to check every 5 minutes (adjust path to your installation)
+*/5 * * * * cd /path/to/easyNetVisibility/server/server_django/easy_net_visibility && python manage.py monitor_network >> /var/log/network_monitor.log 2>&1
 ```
 
 For Docker deployments, you can run the command inside the container:
@@ -159,8 +159,8 @@ Check the logs for any errors related to Pushover notifications.
   "STATIC_ROOT": "static",
   "PUSHOVER_CONFIG": {
     "enabled": true,
-    "user_key": "uQiRzpo4DXghDmr9QzzfQu27cmVRsG",
-    "api_token": "azGDORePK8gMaC0QOYAMyEEuzJnyUi",
+    "user_key": "uXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "api_token": "aXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
     "alert_new_device": true,
     "alert_gateway_timeout": true,
     "alert_device_offline": false,

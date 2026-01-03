@@ -62,13 +62,35 @@ class PushoverNotifier:
             self.alert_new_device = pushover_config.get('alert_new_device', False)
             self.alert_gateway_timeout = pushover_config.get('alert_gateway_timeout', False)
             self.alert_device_offline = pushover_config.get('alert_device_offline', False)
-            self.gateway_timeout_minutes = pushover_config.get('gateway_timeout_minutes', 10)
+            
+            # Validate and set gateway_timeout_minutes
+            raw_timeout = pushover_config.get('gateway_timeout_minutes', 10)
+            default_timeout = 10
+            min_timeout = 1
+            max_timeout = 1440  # 24 hours
+            try:
+                timeout_value = int(raw_timeout)
+                if timeout_value < min_timeout or timeout_value > max_timeout:
+                    _logger.warning(
+                        f"Invalid gateway_timeout_minutes value '{raw_timeout}'; must be between {min_timeout} and {max_timeout} minutes. "
+                        f"Using default of {default_timeout} minutes instead."
+                    )
+                    timeout_value = default_timeout
+            except (TypeError, ValueError):
+                _logger.warning(
+                    f"Non-numeric gateway_timeout_minutes value '{raw_timeout}'; using default of {default_timeout} minutes instead."
+                )
+                timeout_value = default_timeout
+            self.gateway_timeout_minutes = timeout_value
+            
             _logger.info(f"Pushover notifier initialized: new_device={self.alert_new_device}, "
                         f"gateway_timeout={self.alert_gateway_timeout}, "
                         f"device_offline={self.alert_device_offline}")
-        except Exception as e:
-            _logger.error(f"Failed to initialize Pushover client: {e}")
+        except (TypeError, ValueError) as e:
+            _logger.error(f"Invalid Pushover configuration, notifier disabled: {e}")
             self.enabled = False
+            self.client = None
+            self.user_key = None
     
     def send_notification(self, message: str, title: str = "EasyNetVisibility", priority: int = 0):
         """
@@ -77,7 +99,18 @@ class PushoverNotifier:
         Args:
             message: The notification message
             title: The notification title
-            priority: Priority level (-2 to 2, default 0)
+            priority: Pushover priority level (-2 to 2, default 0).
+                -2: lowest priority
+                -1: low priority
+                 0: normal priority
+                 1: high priority
+                 2: emergency (requires acknowledgment in Pushover).
+                
+                The value is passed directly to the underlying Pushover API.
+                When using emergency priority (2) with the HTTP API, Pushover
+                typically requires additional parameters such as retry and
+                expire; this notifier does not configure those parameters
+                itself.
         """
         if not self.enabled or not self.client:
             _logger.debug(f"Notification not sent (disabled): {message}")
@@ -87,7 +120,7 @@ class PushoverNotifier:
             self.client.send_message(self.user_key, message, title=title, priority=priority)
             _logger.info(f"Pushover notification sent: {title} - {message}")
         except Exception as e:
-            _logger.error(f"Failed to send Pushover notification: {e}")
+            _logger.error(f"Failed to send Pushover notification ({type(e).__name__}): {e}")
     
     def notify_new_device(self, device_name: str, ip: str, mac: str):
         """

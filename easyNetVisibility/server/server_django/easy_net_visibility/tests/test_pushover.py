@@ -1,9 +1,8 @@
-import datetime
 from unittest.mock import patch, MagicMock
 from django.test import TestCase, override_settings
 from django.utils import timezone
-from easy_net_visibility_server.models import Device, Sensor
-from easy_net_visibility_server.pushover_notifier import PushoverNotifier, get_notifier
+from easy_net_visibility_server.models import Device
+from easy_net_visibility_server.pushover_notifier import PushoverNotifier
 
 
 # Test configuration with Pushover enabled
