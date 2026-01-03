@@ -88,8 +88,11 @@ def _process_device(device: Device, existing_devices_map):
                 device_name = device.hostname or device.mac
                 notifier.notify_new_device(device_name, device.ip, device.mac)
             except Exception as e:
-                # Log but don't fail the request if notification fails
-                _logger.error(f"Failed to send new device notification: {e}")
+                _logger.error(
+                    "Failed to send new device notification (%s): %s",
+                    type(e).__name__,
+                    e,
+                )
             return 200, None
         except Exception as e:
             _logger.exception(f"Error adding device: {e}")

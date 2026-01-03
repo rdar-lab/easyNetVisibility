@@ -11,17 +11,14 @@ class EasyNetVisibilityServerConfig(AppConfig):
         """
         Called when Django starts. Initialize background services here.
         """
-        # Only start monitoring service in production (when running with Gunicorn/WSGI)
-        # and only in the main process (not in reloader or worker processes)
-        import os
+        # Only start monitoring service in production environments
+        # Skip for management commands and tests
         import sys
         
         # Check if we're running the main Django server (not management commands or tests)
-        # and not in the autoreloader process
         is_main_process = (
             'runserver' not in sys.argv and
-            'test' not in sys.argv and
-            os.environ.get('RUN_MAIN') != 'true'  # Not the autoreloader
+            'test' not in sys.argv
         )
         
         if is_main_process:

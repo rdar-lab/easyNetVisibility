@@ -45,7 +45,7 @@ Add the following configuration to your `conf/settings.json` file:
 - **alert_gateway_timeout** (boolean): Enable notifications when gateways (sensors) go offline. Default: `false`
 - **alert_device_offline** (boolean): Enable notifications when devices go offline. Default: `false`
   - Note: Only devices with a nickname (marked as important) will trigger offline alerts
-- **gateway_timeout_minutes** (integer): Minutes before considering a gateway offline. Default: `10`
+- **gateway_timeout_minutes** (integer): Minutes before considering a gateway offline. Valid range: 1–1440. Values outside this range are ignored and the default of 10 minutes is used with a warning. Default: `10`
 
 ## Usage
 
@@ -131,16 +131,17 @@ Check the logs for any errors related to Pushover notifications.
 
 ### Gateway timeout alerts not working
 
-1. Ensure the monitoring command is being run periodically (via cron or similar)
-2. Check that `alert_gateway_timeout` is enabled
-3. Verify that sensors have been offline for longer than `gateway_timeout_minutes`
+1. Check that `alert_gateway_timeout` is enabled
+2. Verify that sensors have been offline for longer than `gateway_timeout_minutes`
+3. Check the Django logs for error messages related to Pushover
+4. The monitoring service runs automatically with the Django server
 
 ### Device offline alerts not working
 
 1. Ensure `alert_device_offline` is enabled
 2. Verify the device has a nickname set (devices without nicknames won't trigger alerts)
 3. Check that the device has been offline for more than 6 hours
-4. Ensure the monitoring command is being run periodically
+4. The monitoring service runs automatically with the Django server
 
 ## Example Full Configuration
 

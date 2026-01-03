@@ -3,7 +3,7 @@ Tests for the monitor_network management command.
 """
 from io import StringIO
 from unittest.mock import patch, MagicMock
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.core.management import call_command
 from django.utils import timezone
 import datetime

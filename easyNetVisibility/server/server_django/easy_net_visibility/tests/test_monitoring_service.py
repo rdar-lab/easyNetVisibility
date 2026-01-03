@@ -1,7 +1,7 @@
 """
 Tests for the monitoring service that runs as a background thread.
 """
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import patch, MagicMock
 from django.test import TestCase
 from django.utils import timezone
 import datetime

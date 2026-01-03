@@ -86,8 +86,8 @@ class PushoverNotifier:
             _logger.info(f"Pushover notifier initialized: new_device={self.alert_new_device}, "
                         f"gateway_timeout={self.alert_gateway_timeout}, "
                         f"device_offline={self.alert_device_offline}")
-        except (TypeError, ValueError) as e:
-            _logger.error(f"Invalid Pushover configuration, notifier disabled: {e}")
+        except Exception as e:
+            _logger.error(f"Failed to initialize Pushover client: {e}")
             self.enabled = False
             self.client = None
             self.user_key = None

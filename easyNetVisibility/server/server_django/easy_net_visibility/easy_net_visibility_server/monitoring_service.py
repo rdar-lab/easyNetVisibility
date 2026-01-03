@@ -5,7 +5,6 @@ Runs as a daemon thread to monitor network devices and sensors.
 import datetime
 import logging
 import threading
-import time
 from django.utils import timezone
 from easy_net_visibility_server.models import Sensor, Device
 from easy_net_visibility_server.pushover_notifier import get_notifier
@@ -30,26 +29,30 @@ class NetworkMonitoringService:
         self.notifier = get_notifier()
         self._thread = None
         self._stop_event = threading.Event()
+        self._lock = threading.Lock()
         
     def start(self):
         """Start the monitoring service in a background thread."""
-        if self._thread is not None and self._thread.is_alive():
-            logger.warning("Network monitoring service is already running")
-            return
-        
-        logger.info(f"Starting network monitoring service (check interval: {self.check_interval_seconds}s)")
-        self._stop_event.clear()
-        self._thread = threading.Thread(target=self._monitoring_loop, daemon=True)
-        self._thread.start()
+        with self._lock:
+            if self._thread is not None and self._thread.is_alive():
+                logger.warning("Network monitoring service is already running")
+                return
+            
+            logger.info(f"Starting network monitoring service (check interval: {self.check_interval_seconds}s)")
+            self._stop_event.clear()
+            self._thread = threading.Thread(target=self._monitoring_loop, daemon=True)
+            self._thread.start()
         
     def stop(self):
         """Stop the monitoring service."""
-        if self._thread is None:
-            return
-            
-        logger.info("Stopping network monitoring service")
-        self._stop_event.set()
-        self._thread.join(timeout=5)
+        with self._lock:
+            if self._thread is None:
+                return
+                
+            logger.info("Stopping network monitoring service")
+            self._stop_event.set()
+            thread = self._thread
+        thread.join(timeout=5)
         
     def _monitoring_loop(self):
         """Main monitoring loop that runs in the background."""
@@ -80,19 +83,28 @@ class NetworkMonitoringService:
         offline_sensors = Sensor.objects.filter(last_seen__lt=timeout_threshold)
         
         for sensor in offline_sensors:
-            # Check if we've already notified about this sensor being offline
-            # Only notify again if it's been offline for at least 24 hours since last notification
-            should_notify = (
-                sensor.last_notified_timeout is None or
-                sensor.last_notified_timeout < timezone.now() - datetime.timedelta(hours=24)
-            )
-            
-            if should_notify:
-                minutes_offline = sensor.time_since_last_seen()
-                self.notifier.notify_gateway_timeout(sensor.hostname or sensor.mac, minutes_offline)
-                sensor.last_notified_timeout = timezone.now()
-                sensor.save(update_fields=['last_notified_timeout'])
-                logger.info(f"Gateway timeout notification sent: {sensor.hostname} ({sensor.mac}) - {minutes_offline} minutes offline")
+            # Use select_for_update to prevent race conditions
+            try:
+                # Re-fetch with lock to ensure atomic check-and-update
+                locked_sensor = Sensor.objects.select_for_update(nowait=True).get(pk=sensor.pk)
+                
+                # Check if we've already notified about this sensor being offline
+                # Only notify again if it's been offline for at least 24 hours since last notification
+                should_notify = (
+                    locked_sensor.last_notified_timeout is None or
+                    locked_sensor.last_notified_timeout < timezone.now() - datetime.timedelta(hours=24)
+                )
+                
+                if should_notify:
+                    minutes_offline = locked_sensor.time_since_last_seen()
+                    self.notifier.notify_gateway_timeout(locked_sensor.hostname or locked_sensor.mac, minutes_offline)
+                    locked_sensor.last_notified_timeout = timezone.now()
+                    locked_sensor.save(update_fields=['last_notified_timeout'])
+                    logger.info(f"Gateway timeout notification sent: {locked_sensor.hostname} ({locked_sensor.mac}) - {minutes_offline} minutes offline")
+            except Exception as e:
+                # Log and continue if we can't acquire lock (another process is handling it)
+                logger.debug(f"Skipping sensor {sensor.mac} - could not acquire lock or error occurred: {e}")
+                continue
         
         # Clear notification timestamps for sensors that are back online
         online_sensors = Sensor.objects.filter(
@@ -120,19 +132,28 @@ class NetworkMonitoringService:
         ).exclude(nickname__isnull=True).exclude(nickname='')
         
         for device in offline_devices:
-            # Check if we've already notified about this device being offline
-            # Only notify again if it's been offline for at least 24 hours since last notification
-            should_notify = (
-                device.last_notified_offline is None or
-                device.last_notified_offline < timezone.now() - datetime.timedelta(hours=24)
-            )
-            
-            if should_notify:
-                device_name = device.name() or device.mac
-                self.notifier.notify_device_offline(device_name, device.ip, device.mac)
-                device.last_notified_offline = timezone.now()
-                device.save(update_fields=['last_notified_offline'])
-                logger.info(f"Device offline notification sent: {device_name} ({device.ip}) - {device.mac}")
+            # Use select_for_update to prevent race conditions
+            try:
+                # Re-fetch with lock to ensure atomic check-and-update
+                locked_device = Device.objects.select_for_update(nowait=True).get(pk=device.pk)
+                
+                # Check if we've already notified about this device being offline
+                # Only notify again if it's been offline for at least 24 hours since last notification
+                should_notify = (
+                    locked_device.last_notified_offline is None or
+                    locked_device.last_notified_offline < timezone.now() - datetime.timedelta(hours=24)
+                )
+                
+                if should_notify:
+                    device_name = locked_device.name() or locked_device.mac
+                    self.notifier.notify_device_offline(device_name, locked_device.ip, locked_device.mac)
+                    locked_device.last_notified_offline = timezone.now()
+                    locked_device.save(update_fields=['last_notified_offline'])
+                    logger.info(f"Device offline notification sent: {device_name} ({locked_device.ip}) - {locked_device.mac}")
+            except Exception as e:
+                # Log and continue if we can't acquire lock (another process is handling it)
+                logger.debug(f"Skipping device {device.mac} - could not acquire lock or error occurred: {e}")
+                continue
         
         # Clear notification timestamps for devices that are back online
         online_devices = Device.objects.filter(
