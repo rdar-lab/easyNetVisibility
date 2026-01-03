@@ -9,6 +9,7 @@ from rest_framework.response import Response
 
 from . import validators
 from .models import Device, Port, Sensor
+from .pushover_notifier import get_notifier
 
 # If a device was seen within this threshold, don't update last_seen again
 # This is disabled because it didn't effect the performance in a meaningful way
@@ -78,6 +79,14 @@ def _process_device(device: Device, existing_devices_map):
     if device.mac not in existing_devices_map:
         try:
             device.save()
+            # Send Pushover notification for new device
+            try:
+                notifier = get_notifier()
+                device_name = device.hostname or device.mac
+                notifier.notify_new_device(device_name, device.ip, device.mac)
+            except Exception as e:
+                # Log but don't fail the request if notification fails
+                traceback.print_exc()
             return 200, None
         except Exception as e:
             traceback.print_exc()

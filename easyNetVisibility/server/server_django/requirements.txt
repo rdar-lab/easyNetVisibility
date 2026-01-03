@@ -2,3 +2,4 @@ django
 djangorestframework
 martor
 gunicorn
+python-pushover

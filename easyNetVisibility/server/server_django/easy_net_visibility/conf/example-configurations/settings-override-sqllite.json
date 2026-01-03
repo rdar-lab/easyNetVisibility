@@ -4,5 +4,14 @@
       "ENGINE": "django.db.backends.sqlite3",
       "NAME": "db.sqlite3"
     }
+  },
+  "PUSHOVER_CONFIG": {
+    "enabled": false,
+    "user_key": "YOUR_PUSHOVER_USER_KEY",
+    "api_token": "YOUR_PUSHOVER_API_TOKEN",
+    "alert_new_device": true,
+    "alert_gateway_timeout": true,
+    "alert_device_offline": false,
+    "gateway_timeout_minutes": 10
   }
 }
