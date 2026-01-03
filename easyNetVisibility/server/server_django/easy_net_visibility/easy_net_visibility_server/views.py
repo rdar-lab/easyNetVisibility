@@ -12,6 +12,7 @@ def get_subnet(ip_address, prefix_length=24):
     Calculate the subnet for a given IP address.
     Uses /24 (255.255.255.0) as default subnet mask.
     Returns subnet in CIDR notation (e.g., '192.168.1.0/24').
+    Returns 'unknown' for invalid or empty IP addresses.
     """
     try:
         network = ipaddress.ip_network(f"{ip_address}/{prefix_length}", strict=False)
