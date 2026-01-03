@@ -178,4 +178,4 @@ Check the logs for any errors related to Pushover notifications.
 
 ## Dependencies
 
-The Pushover integration requires the `python-pushover` library, which is included in the `requirements.txt` file. It will be installed automatically when building the Docker image or when running `pip install -r requirements.txt`.
+The Pushover integration requires the `pushover-complete` library, which is included in the `requirements.txt` file. It will be installed automatically when building the Docker image or when running `pip install -r requirements.txt`.

@@ -2,6 +2,7 @@
 Pushover notification service for sending alerts about network devices and sensors.
 """
 import logging
+import threading
 from typing import Optional
 from django.conf import settings
 
@@ -133,13 +134,17 @@ class PushoverNotifier:
         self.send_notification(message, title="Device Offline Alert", priority=0)
 
 
-# Global notifier instance
+# Global notifier instance and lock for thread-safe initialization
 _notifier: Optional[PushoverNotifier] = None
+_notifier_lock = threading.Lock()
 
 
 def get_notifier() -> PushoverNotifier:
-    """Get or create the global PushoverNotifier instance."""
+    """Get or create the global PushoverNotifier instance in a thread-safe manner."""
     global _notifier
     if _notifier is None:
-        _notifier = PushoverNotifier()
+        with _notifier_lock:
+            # Double-check pattern to avoid race condition
+            if _notifier is None:
+                _notifier = PushoverNotifier()
     return _notifier
