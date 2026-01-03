@@ -14,6 +14,7 @@ class Device(models.Model):
     vendor = models.CharField(max_length=255, blank=True, null=True)
     first_seen = models.DateTimeField('first_seen')
     last_seen = models.DateTimeField('last_seen')
+    last_notified_offline = models.DateTimeField('last_notified_offline', blank=True, null=True)
 
     def is_hidden(self):
         return self.nickname is None and not self.online()
@@ -70,6 +71,7 @@ class Sensor(models.Model):
     hostname = models.CharField(max_length=255, blank=True, null=True)
     first_seen = models.DateTimeField('first_seen')
     last_seen = models.DateTimeField('last_seen')
+    last_notified_timeout = models.DateTimeField('last_notified_timeout', blank=True, null=True)
 
     def time_since_last_seen(self):
         return int((timezone.now() - self.last_seen).total_seconds() / 60)

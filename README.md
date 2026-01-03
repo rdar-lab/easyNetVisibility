@@ -19,6 +19,18 @@ This was originally based on the open-source SweedSecurity project. Here is a li
 3. Server Implemented on Django
 4. Better UI for large number of devices
 
+## Features
+
+- Network device scanning and monitoring
+- Port scanning and service detection
+- Web-based dashboard for device visibility
+- **Pushover notifications** for real-time alerts:
+  - New device detection
+  - Gateway timeout alerts
+  - Device offline notifications (optional)
+
+For detailed Pushover configuration, see [PUSHOVER.md](PUSHOVER.md).
+
 ## Installation:
 
 ### For the server –

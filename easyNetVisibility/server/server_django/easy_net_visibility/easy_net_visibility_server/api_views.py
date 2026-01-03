@@ -1,4 +1,5 @@
 import datetime
+import logging
 import traceback
 
 from django.conf import settings
@@ -9,10 +10,13 @@ from rest_framework.response import Response
 
 from . import validators
 from .models import Device, Port, Sensor
+from .pushover_notifier import get_notifier
 
 # If a device was seen within this threshold, don't update last_seen again
 # This is disabled because it didn't effect the performance in a meaningful way
 _LAST_SEEN_THRESHOLD_MINUTES = 0
+
+_logger = logging.getLogger(__name__)
 
 def _client_expects_json(request):
     # Accepts JSON if header or ?format=json
@@ -78,9 +82,20 @@ def _process_device(device: Device, existing_devices_map):
     if device.mac not in existing_devices_map:
         try:
             device.save()
+            # Send Pushover notification for new device
+            try:
+                notifier = get_notifier()
+                device_name = device.hostname or device.mac
+                notifier.notify_new_device(device_name, device.ip, device.mac)
+            except Exception as e:
+                _logger.error(
+                    "Failed to send new device notification (%s): %s",
+                    type(e).__name__,
+                    e,
+                )
             return 200, None
         except Exception as e:
-            traceback.print_exc()
+            _logger.exception(f"Error adding device: {e}")
             return 500, f"Error adding device: {str(e)}"
     else:
         existing_device = existing_devices_map.get(device.mac)
