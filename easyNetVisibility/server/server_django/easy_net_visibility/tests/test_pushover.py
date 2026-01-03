@@ -21,7 +21,7 @@ PUSHOVER_TEST_CONFIG = {
 class TestPushoverNotifier(TestCase):
     """Test the PushoverNotifier class"""
 
-    @patch('easy_net_visibility_server.pushover_notifier.PushoverClient')
+    @patch('easy_net_visibility_server.pushover_notifier.PushoverAPI')
     @override_settings(PUSHOVER_CONFIG=PUSHOVER_TEST_CONFIG)
     def test_notifier_initialization_success(self, mock_client):
         """Test successful initialization of Pushover notifier"""
@@ -32,7 +32,8 @@ class TestPushoverNotifier(TestCase):
         self.assertTrue(notifier.alert_gateway_timeout)
         self.assertTrue(notifier.alert_device_offline)
         self.assertEqual(notifier.gateway_timeout_minutes, 10)
-        mock_client.assert_called_once_with('test_user_key', api_token='test_api_token')
+        self.assertEqual(notifier.user_key, 'test_user_key')
+        mock_client.assert_called_once_with('test_api_token')
 
     @override_settings(PUSHOVER_CONFIG={'enabled': False})
     def test_notifier_disabled(self):
@@ -44,15 +45,16 @@ class TestPushoverNotifier(TestCase):
     @override_settings()
     def test_notifier_no_config(self):
         """Test notifier handles missing configuration gracefully"""
-        # Remove PUSHOVER_CONFIG if it exists
-        if hasattr(TestCase.settings_module, 'PUSHOVER_CONFIG'):
-            delattr(TestCase.settings_module, 'PUSHOVER_CONFIG')
+        # Create a notifier without PUSHOVER_CONFIG in settings
+        from django.conf import settings
+        if hasattr(settings, 'PUSHOVER_CONFIG'):
+            delattr(settings, 'PUSHOVER_CONFIG')
         
         notifier = PushoverNotifier()
         
         self.assertFalse(notifier.enabled)
 
-    @patch('easy_net_visibility_server.pushover_notifier.PushoverClient')
+    @patch('easy_net_visibility_server.pushover_notifier.PushoverAPI')
     @override_settings(PUSHOVER_CONFIG=PUSHOVER_TEST_CONFIG)
     def test_send_notification_success(self, mock_client_class):
         """Test sending a notification successfully"""
@@ -63,10 +65,10 @@ class TestPushoverNotifier(TestCase):
         notifier.send_notification("Test message", "Test Title", priority=1)
         
         mock_client.send_message.assert_called_once_with(
-            "Test message", title="Test Title", priority=1
+            'test_user_key', "Test message", title="Test Title", priority=1
         )
 
-    @patch('easy_net_visibility_server.pushover_notifier.PushoverClient')
+    @patch('easy_net_visibility_server.pushover_notifier.PushoverAPI')
     @override_settings(PUSHOVER_CONFIG=PUSHOVER_TEST_CONFIG)
     def test_notify_new_device(self, mock_client_class):
         """Test new device notification"""
@@ -80,13 +82,14 @@ class TestPushoverNotifier(TestCase):
         mock_client.send_message.assert_called_once()
         call_args = mock_client.send_message.call_args
         
-        # Check the message content
-        self.assertIn("test-device", call_args[0][0])
-        self.assertIn("192.168.1.100", call_args[0][0])
-        self.assertIn("AA:BB:CC:DD:EE:FF", call_args[0][0])
+        # Check the message content (first arg is user_key, second is message)
+        self.assertEqual(call_args[0][0], 'test_user_key')
+        self.assertIn("test-device", call_args[0][1])
+        self.assertIn("192.168.1.100", call_args[0][1])
+        self.assertIn("AA:BB:CC:DD:EE:FF", call_args[0][1])
         self.assertEqual(call_args[1]['title'], "New Device Detected")
 
-    @patch('easy_net_visibility_server.pushover_notifier.PushoverClient')
+    @patch('easy_net_visibility_server.pushover_notifier.PushoverAPI')
     @override_settings(PUSHOVER_CONFIG=PUSHOVER_TEST_CONFIG)
     def test_notify_gateway_timeout(self, mock_client_class):
         """Test gateway timeout notification"""
@@ -100,13 +103,14 @@ class TestPushoverNotifier(TestCase):
         mock_client.send_message.assert_called_once()
         call_args = mock_client.send_message.call_args
         
-        # Check the message content
-        self.assertIn("gateway-1", call_args[0][0])
-        self.assertIn("15 minutes", call_args[0][0])
+        # Check the message content (first arg is user_key, second is message)
+        self.assertEqual(call_args[0][0], 'test_user_key')
+        self.assertIn("gateway-1", call_args[0][1])
+        self.assertIn("15 minutes", call_args[0][1])
         self.assertEqual(call_args[1]['title'], "Gateway Timeout Alert")
         self.assertEqual(call_args[1]['priority'], 1)
 
-    @patch('easy_net_visibility_server.pushover_notifier.PushoverClient')
+    @patch('easy_net_visibility_server.pushover_notifier.PushoverAPI')
     @override_settings(PUSHOVER_CONFIG=PUSHOVER_TEST_CONFIG)
     def test_notify_device_offline(self, mock_client_class):
         """Test device offline notification"""
@@ -120,13 +124,14 @@ class TestPushoverNotifier(TestCase):
         mock_client.send_message.assert_called_once()
         call_args = mock_client.send_message.call_args
         
-        # Check the message content
-        self.assertIn("offline-device", call_args[0][0])
-        self.assertIn("192.168.1.200", call_args[0][0])
-        self.assertIn("11:22:33:44:55:66", call_args[0][0])
+        # Check the message content (first arg is user_key, second is message)
+        self.assertEqual(call_args[0][0], 'test_user_key')
+        self.assertIn("offline-device", call_args[0][1])
+        self.assertIn("192.168.1.200", call_args[0][1])
+        self.assertIn("11:22:33:44:55:66", call_args[0][1])
         self.assertEqual(call_args[1]['title'], "Device Offline Alert")
 
-    @patch('easy_net_visibility_server.pushover_notifier.PushoverClient')
+    @patch('easy_net_visibility_server.pushover_notifier.PushoverAPI')
     @override_settings(PUSHOVER_CONFIG={**PUSHOVER_TEST_CONFIG, 'alert_new_device': False})
     def test_notification_not_sent_when_disabled(self, mock_client_class):
         """Test notifications are not sent when alert type is disabled"""
@@ -143,7 +148,7 @@ class TestPushoverNotifier(TestCase):
 class TestPushoverIntegration(TestCase):
     """Test Pushover integration with API views"""
 
-    @patch('easy_net_visibility_server.pushover_notifier.PushoverClient')
+    @patch('easy_net_visibility_server.pushover_notifier.PushoverAPI')
     @patch('easy_net_visibility_server.api_views.get_notifier')
     @override_settings(PUSHOVER_CONFIG=PUSHOVER_TEST_CONFIG)
     def test_new_device_triggers_notification(self, mock_get_notifier, mock_client_class):
@@ -174,9 +179,10 @@ class TestPushoverIntegration(TestCase):
         call_args = mock_notifier.notify_new_device.call_args[0]
         self.assertEqual(call_args[0], 'new-device')
         self.assertEqual(call_args[1], '192.168.1.50')
-        self.assertIn('aa:bb:cc:dd:ee:ff', call_args[2].lower())
+        # MAC address gets normalized to lowercase without colons
+        self.assertIn('aabbccddeeff', call_args[2].lower())
 
-    @patch('easy_net_visibility_server.pushover_notifier.PushoverClient')
+    @patch('easy_net_visibility_server.pushover_notifier.PushoverAPI')
     @patch('easy_net_visibility_server.api_views.get_notifier')
     @override_settings(PUSHOVER_CONFIG=PUSHOVER_TEST_CONFIG)
     def test_existing_device_no_notification(self, mock_get_notifier, mock_client_class):
@@ -184,11 +190,11 @@ class TestPushoverIntegration(TestCase):
         mock_notifier = MagicMock()
         mock_get_notifier.return_value = mock_notifier
         
-        # Create an existing device
+        # Create an existing device with normalized MAC address
         existing = Device.objects.create(
             hostname='existing-device',
             ip='192.168.1.60',
-            mac='11:22:33:44:55:66',
+            mac='112233445566',  # Normalized MAC (no colons)
             vendor='TestVendor',
             first_seen=timezone.now(),
             last_seen=timezone.now()
@@ -200,7 +206,7 @@ class TestPushoverIntegration(TestCase):
         device_data = {
             'hostname': 'existing-device',
             'ip': '192.168.1.61',  # Changed IP
-            'mac': '11:22:33:44:55:66',
+            'mac': '11:22:33:44:55:66',  # Will be normalized to match existing
             'vendor': 'TestVendor'
         }
         device = _create_device_obj_from_data(device_data)

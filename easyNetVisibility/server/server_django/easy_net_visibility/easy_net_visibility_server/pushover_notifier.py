@@ -6,9 +6,9 @@ from typing import Optional
 from django.conf import settings
 
 try:
-    from pushover import Client as PushoverClient
+    from pushover_complete import PushoverAPI
 except ImportError:
-    PushoverClient = None
+    PushoverAPI = None
 
 _logger = logging.getLogger(__name__)
 
@@ -21,6 +21,7 @@ class PushoverNotifier:
     def __init__(self):
         self.enabled = False
         self.client = None
+        self.user_key = None
         self.alert_new_device = False
         self.alert_gateway_timeout = False
         self.alert_device_offline = False
@@ -36,8 +37,8 @@ class PushoverNotifier:
             _logger.debug("Pushover configuration not found in settings")
             return
         
-        if not PushoverClient:
-            _logger.warning("python-pushover library not installed, notifications disabled")
+        if not PushoverAPI:
+            _logger.warning("pushover-complete library not installed, notifications disabled")
             return
         
         self.enabled = pushover_config.get('enabled', False)
@@ -55,7 +56,8 @@ class PushoverNotifier:
             return
         
         try:
-            self.client = PushoverClient(user_key, api_token=api_token)
+            self.client = PushoverAPI(api_token)
+            self.user_key = user_key
             self.alert_new_device = pushover_config.get('alert_new_device', False)
             self.alert_gateway_timeout = pushover_config.get('alert_gateway_timeout', False)
             self.alert_device_offline = pushover_config.get('alert_device_offline', False)
@@ -81,7 +83,7 @@ class PushoverNotifier:
             return
         
         try:
-            self.client.send_message(message, title=title, priority=priority)
+            self.client.send_message(self.user_key, message, title=title, priority=priority)
             _logger.info(f"Pushover notification sent: {title} - {message}")
         except Exception as e:
             _logger.error(f"Failed to send Pushover notification: {e}")
