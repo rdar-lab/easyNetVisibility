@@ -45,7 +45,7 @@ class TestGenerateSession(unittest.TestCase):
         server_api._server_username = None
         server_api._server_password = None
 
-    @patch('requests.Session')
+    @patch('server_api.requests.Session')
     def test_generate_session_with_auth(self, mock_session_class):
         server_api._server_username = 'user'
         server_api._server_password = 'pass'
@@ -58,7 +58,7 @@ class TestGenerateSession(unittest.TestCase):
         self.assertIsNotNone(session)
         self.assertEqual(session.auth, ('user', 'pass'))
 
-    @patch('requests.Session')
+    @patch('server_api.requests.Session')
     def test_generate_session_without_auth(self, mock_session_class):
         server_api._server_username = None
         
