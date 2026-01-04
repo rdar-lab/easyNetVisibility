@@ -2,6 +2,25 @@
 
 EasyNetVisibility supports Pushover integration for real-time notifications about network events.
 
+## Table of Contents
+
+- [Features](#features)
+- [Prerequisites](#prerequisites)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [Notification Priority Levels](#notification-priority-levels)
+- [Testing the Integration](#testing-the-integration)
+- [Troubleshooting](#troubleshooting)
+- [Example Full Configuration](#example-full-configuration)
+- [Security Notes](#security-notes)
+- [Dependencies](#dependencies)
+
+---
+
+**Related Documentation**: [README.md](README.md) | [ARCHITECTURE.md](ARCHITECTURE.md) | [API.md](API.md)
+
+---
+
 ## Features
 
 The Pushover integration provides three types of alerts:
