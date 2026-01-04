@@ -1,7 +1,7 @@
+import os
+import sys
 import unittest
 from unittest.mock import patch, mock_open
-import sys
-import os
 
 # Add the sensor directory to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'sensor'))
@@ -128,12 +128,12 @@ class TestGetMac(unittest.TestCase):
     def test_get_mac_cached(self, mock_get_if_hwaddr):
         network_utils.init('eth0')
         mock_get_if_hwaddr.return_value = 'aa:bb:cc:dd:ee:ff'
-        
+
         # First call
         result1 = network_utils.get_mac()
         # Second call should use cached value
         result2 = network_utils.get_mac()
-        
+
         self.assertEqual(result1, result2)
         # Should only call once due to caching
         mock_get_if_hwaddr.assert_called_once()
@@ -164,12 +164,12 @@ class TestGetHostname(unittest.TestCase):
     @patch('socket.gethostname')
     def test_get_hostname_cached(self, mock_gethostname):
         mock_gethostname.return_value = 'test-sensor'
-        
+
         # First call
         result1 = network_utils.get_hostname()
         # Second call should use cached value
         result2 = network_utils.get_hostname()
-        
+
         self.assertEqual(result1, result2)
         # Should only call once due to caching
         mock_gethostname.assert_called_once()

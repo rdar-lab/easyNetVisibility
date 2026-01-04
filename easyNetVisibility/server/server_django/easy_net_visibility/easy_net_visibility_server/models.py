@@ -1,5 +1,6 @@
-from django.db import models
 import datetime
+
+from django.db import models
 from django.utils import timezone
 
 
@@ -59,7 +60,7 @@ class Port(models.Model):
     class Meta:
         db_table = "ports"
         constraints = [
-            models.UniqueConstraint(fields=['device','port_num'], name='nk_port')
+            models.UniqueConstraint(fields=['device', 'port_num'], name='nk_port')
         ]
         unique_together = (('device', 'port_num'),)
 

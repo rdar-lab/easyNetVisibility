@@ -1,0 +1,96 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ main, master, develop, copilot/** ]
+  pull_request:
+    branches: [ main, master, develop ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-server:
+    name: Check Django Server
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+    
+    defaults:
+      run:
+        working-directory: easyNetVisibility/server/server_django
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Cache pip packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-check-server-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-check-server-
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install flake8 
+        pip install bandit[toml]
+    
+    - name: Lint with flake8
+      run: |
+        # Run flake8 on all Python files - fail on any errors
+        flake8 . --count --max-line-length=200 --show-source --statistics --exclude='*/migrations/*,*/tests/*'
+      continue-on-error: false
+
+    - name: Security scan with bandit
+      run: |
+        # Run bandit security scanner on all Python files
+        bandit -r . -ll -x "*/migrations/*,*/tests/*"
+      continue-on-error: false
+
+  check-client:
+    name: Check Client
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+    
+    defaults:
+      run:
+        working-directory: easyNetVisibility/client
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Cache pip packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-check-client-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-checks-client-
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install flake8 
+    - name: Lint with flake8
+      run: |
+        # Run flake8 on all Python files - fail on any errors
+        flake8 . --count --max-line-length=200 --show-source --statistics --exclude='tests'
+      continue-on-error: false

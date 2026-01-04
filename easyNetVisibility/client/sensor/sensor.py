@@ -1,8 +1,7 @@
-from time import sleep
-
 import configparser
 import logging
 import threading
+from time import sleep
 
 import healthCheck
 import logs

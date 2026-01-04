@@ -12,8 +12,9 @@ def convert_mac(mac_address):
 
 
 def mac_address(mac_address):
-    dash_match = re.match(r"^[A-Fa-f0-9]{2}-[A-Fa-f0-9]{2}-[A-Fa-f0-9]{2}-[A-Fa-f0-9]{2}-[A-Fa-f0-9]{2}-[A-Fa-f0-9]{2}$",
-                         mac_address)
+    dash_match = re.match(
+        r"^[A-Fa-f0-9]{2}-[A-Fa-f0-9]{2}-[A-Fa-f0-9]{2}-[A-Fa-f0-9]{2}-[A-Fa-f0-9]{2}-[A-Fa-f0-9]{2}$",
+        mac_address)
     colon_match = re.match(
         r"^[A-Fa-f0-9]{2}:[A-Fa-f0-9]{2}:[A-Fa-f0-9]{2}:[A-Fa-f0-9]{2}:[A-Fa-f0-9]{2}:[A-Fa-f0-9]{2}$", mac_address)
     alpha_match = re.match(r"^[A-Fa-f0-9]{12}$", mac_address)

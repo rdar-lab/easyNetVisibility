@@ -3,6 +3,7 @@ import logging
 import re
 import socket
 import struct
+
 from scapy.all import get_if_hwaddr
 
 _logger = logging.getLogger('EasyNetVisibility')
@@ -34,7 +35,8 @@ def get_ip():
         _logger.warning("Interface is not set. Cannot get IP address.")
         return None
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    return socket.inet_ntoa(fcntl.ioctl(s.fileno(), 0x8915, struct.pack('256s', _interface[:15].encode('utf-8')))[20:24])
+    return socket.inet_ntoa(
+        fcntl.ioctl(s.fileno(), 0x8915, struct.pack('256s', _interface[:15].encode('utf-8')))[20:24])
 
 
 def get_netmask():
@@ -42,7 +44,8 @@ def get_netmask():
         _logger.warning("Interface is not set. Cannot get netmask.")
         return None
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    netmask = socket.inet_ntoa(fcntl.ioctl(s.fileno(), 0x891b, struct.pack('256s', _interface[:15].encode('utf-8')))[20:24])
+    netmask = socket.inet_ntoa(
+        fcntl.ioctl(s.fileno(), 0x891b, struct.pack('256s', _interface[:15].encode('utf-8')))[20:24])
     netmask_bits = sum([bin(int(x)).count('1') for x in netmask.split('.')])
     return netmask_bits
 
