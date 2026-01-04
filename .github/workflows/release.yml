@@ -51,7 +51,7 @@ jobs:
           echo "Building version: ${VERSION}"
           
           # Check if this is a pre-release (contains -test, -alpha, -beta, -rc, etc.)
-          if [[ "$VERSION_NUMBER" =~ -[a-zA-Z] ]]; then
+          if [[ "$VERSION_NUMBER" =~ -[a-zA-Z][a-zA-Z0-9]* ]]; then
             echo "is_prerelease=true" >> $GITHUB_OUTPUT
             echo "Detected pre-release version: ${VERSION_NUMBER}"
           else
@@ -64,9 +64,7 @@ jobs:
         with:
           context: ./easyNetVisibility/server/server_django
           push: true
-          tags: |
-            rdxmaster/easy-net-visibility-server-django:${{ steps.get_version.outputs.version_number }}
-            ${{ steps.get_version.outputs.is_prerelease == 'false' && 'rdxmaster/easy-net-visibility-server-django:latest' || '' }}
+          tags: rdxmaster/easy-net-visibility-server-django:${{ steps.get_version.outputs.version_number }}${{ steps.get_version.outputs.is_prerelease == 'false' && format(',rdxmaster/easy-net-visibility-server-django:latest') || '' }}
           cache-from: >-
             type=registry,ref=rdxmaster/easy-net-visibility-server-django:latest
           cache-to: type=inline
@@ -76,9 +74,7 @@ jobs:
         with:
           context: ./easyNetVisibility/client
           push: true
-          tags: |
-            rdxmaster/easy-net-visibility-sensor:${{ steps.get_version.outputs.version_number }}
-            ${{ steps.get_version.outputs.is_prerelease == 'false' && 'rdxmaster/easy-net-visibility-sensor:latest' || '' }}
+          tags: rdxmaster/easy-net-visibility-sensor:${{ steps.get_version.outputs.version_number }}${{ steps.get_version.outputs.is_prerelease == 'false' && format(',rdxmaster/easy-net-visibility-sensor:latest') || '' }}
           cache-from: >-
             type=registry,ref=rdxmaster/easy-net-visibility-sensor:latest
           cache-to: type=inline
