@@ -101,32 +101,36 @@ jobs:
           # Get the previous tag
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
 
+          cat > RELEASE_NOTES.md << 'EOF'
+          ## What's Changed
+
+          EOF
+
           if [ -z "$PREV_TAG" ]; then
             echo "First release - no previous tag found"
-            CHANGELOG="## First Release\n\nThis is the initial release of"
-            CHANGELOG+=" Easy Net Visibility.\n\n### Components\n"
-            CHANGELOG+="- Server (Django-based web dashboard)\n"
-            CHANGELOG+="- Sensor (Network scanning agent)\n\n"
-            CHANGELOG+="### Docker Images\n"
-            CHANGELOG+="- \`rdxmaster/easy-net-visibility-server-django:"
-            CHANGELOG+="${{ steps.get_version.outputs.version_number }}\`\n"
-            CHANGELOG+="- \`rdxmaster/easy-net-visibility-sensor:"
-            CHANGELOG+="${{ steps.get_version.outputs.version_number }}\`"
-          else
-            echo "Generating changelog from $PREV_TAG to"
-            echo " ${{ steps.get_version.outputs.version }}"
-            CHANGELOG="## What's Changed\n\n"
-            CHANGELOG+=$(git log --pretty=format:"- %s (%h)" \
-              ${PREV_TAG}..${{ steps.get_version.outputs.version }} | head -50)
-            CHANGELOG+="\n\n### Docker Images\n"
-            CHANGELOG+="- \`rdxmaster/easy-net-visibility-server-django:"
-            CHANGELOG+="${{ steps.get_version.outputs.version_number }}\`\n"
-            CHANGELOG+="- \`rdxmaster/easy-net-visibility-sensor:"
-            CHANGELOG+="${{ steps.get_version.outputs.version_number }}\`"
-          fi
+            cat >> RELEASE_NOTES.md << EOF
+          This is the initial release of Easy Net Visibility.
 
-          # Save changelog to file
-          echo -e "$CHANGELOG" > RELEASE_NOTES.md
+          ### Components
+          - Server (Django-based web dashboard)
+          - Sensor (Network scanning agent)
+
+          ### Docker Images
+          - \`rdxmaster/easy-net-visibility-server-django:${{ steps.get_version.outputs.version_number }}\`
+          - \`rdxmaster/easy-net-visibility-sensor:${{ steps.get_version.outputs.version_number }}\`
+          EOF
+          else
+            echo "Generating changelog from $PREV_TAG to ${{ steps.get_version.outputs.version }}"
+            git log --pretty=format:"- %s (%h)" \
+              ${PREV_TAG}..${{ steps.get_version.outputs.version }} | head -50 \
+              >> RELEASE_NOTES.md
+            cat >> RELEASE_NOTES.md << EOF
+
+          ### Docker Images
+          - \`rdxmaster/easy-net-visibility-server-django:${{ steps.get_version.outputs.version_number }}\`
+          - \`rdxmaster/easy-net-visibility-sensor:${{ steps.get_version.outputs.version_number }}\`
+          EOF
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1

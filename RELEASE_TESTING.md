@@ -167,7 +167,7 @@ Once testing is complete and successful:
   cd easyNetVisibility/server/server_django
   docker build -t test-server .
 
-  cd ../../../easyNetVisibility/client
+  cd ../../client
   docker build -t test-sensor .
   ```
 - Fix any Dockerfile issues
