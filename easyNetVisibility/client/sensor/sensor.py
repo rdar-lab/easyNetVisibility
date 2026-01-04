@@ -9,6 +9,16 @@ import network_utils
 import nmap
 import server_api
 
+# Fortigate integration is optional
+fortigate = None
+try:
+    import fortigate as fortigate_module
+
+    fortigate = fortigate_module
+except ImportError:
+    # Fortigate module is not installed; proceed without Fortigate integration
+    pass
+
 logs.setup()
 _logger = logging.getLogger('EasyNetVisibility')
 
@@ -39,6 +49,25 @@ def start_port_scan():
             _logger.exception("Port scan error: " + str(e))
 
         sleep(60 * 60)
+
+
+def start_fortigate_scan():
+    """Scan Fortigate firewall for devices."""
+    while 1:
+        try:
+            if fortigate:
+                devices = fortigate.discover_devices()
+                _logger.info(f"Fortigate detected {len(devices)} devices")
+                if len(devices) > 0:
+                    server_api.add_devices(devices)
+            else:
+                _logger.warning("Fortigate module not available")
+                # Continue to periodically log warning if module becomes unavailable
+                continue
+        except Exception as e:
+            _logger.exception("Fortigate scan error: " + str(e))
+
+        sleep(60 * 10)  # Scan every 10 minutes
 
 
 def start_health_check():
@@ -81,6 +110,43 @@ def run():
 
     interface = config.get('General', 'interface')
     network_utils.init(interface)
+
+    # Initialize Fortigate if configured
+    fortigate_enabled = False
+    if config.has_section('Fortigate') and config.has_option('Fortigate', 'enabled'):
+        fortigate_enabled_param = config.get('Fortigate', 'enabled')
+        fortigate_enabled = fortigate_enabled_param.lower() in ['true', '1', 'yes']
+
+    if fortigate_enabled and fortigate:
+        _logger.info("Fortigate integration is enabled")
+
+        # Check for required configuration options
+        if not config.has_option('Fortigate', 'host'):
+            _logger.error("Fortigate enabled but 'host' option is missing in config")
+        elif not config.has_option('Fortigate', 'apiKey'):
+            _logger.error("Fortigate enabled but 'apiKey' option is missing in config")
+        else:
+            try:
+                fortigate_host = config.get('Fortigate', 'host')
+                fortigate_api_key = config.get('Fortigate', 'apiKey')
+
+                if config.has_option('Fortigate', 'validateSSL'):
+                    validate_ssl_param = config.get('Fortigate', 'validateSSL')
+                    validate_ssl = validate_ssl_param.lower() not in ['false', '0', 'no']
+                else:
+                    validate_ssl = True
+
+                fortigate.init(fortigate_host, fortigate_api_key, validate_ssl)
+
+                # Start Fortigate scanning thread
+                fortigate_thread = threading.Thread(target=start_fortigate_scan)
+                fortigate_thread.start()
+            except Exception as e:
+                _logger.error(f"Failed to initialize Fortigate integration: {e}")
+    elif fortigate_enabled and not fortigate:
+        _logger.warning("Fortigate is enabled in config but module is not available")
+    else:
+        _logger.info("Fortigate integration is disabled")
 
     health_check_thread = threading.Thread(target=start_health_check)
     health_check_thread.start()
