@@ -4,6 +4,14 @@
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
+## Documentation
+
+- **[README.md](README.md)** - Overview, installation, and quick start (this file)
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture and design details
+- **[API.md](API.md)** - Complete API reference with examples
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines for developers
+- **[PUSHOVER.md](PUSHOVER.md)** - Pushover notification integration guide
+
 ## Table of Contents
 
 - [Overview](#overview)
