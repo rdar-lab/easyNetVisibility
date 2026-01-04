@@ -1,7 +1,10 @@
 import datetime
 
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
+
+from . import validators
 
 
 # Create your models here.
@@ -16,6 +19,34 @@ class Device(models.Model):
     first_seen = models.DateTimeField('first_seen')
     last_seen = models.DateTimeField('last_seen')
     last_notified_offline = models.DateTimeField('last_notified_offline', blank=True, null=True)
+
+    def clean(self):
+        """Validate device fields."""
+        super().clean()
+        errors = {}
+        
+        # Validate MAC address
+        if not self.mac:
+            errors['mac'] = 'Must Supply MAC Address'
+        elif not validators.mac_address(self.mac):
+            errors['mac'] = 'Invalid MAC Address'
+        
+        # Validate IP address (if provided and not empty)
+        if self.ip and not validators.ip_address(self.ip):
+            errors['ip'] = 'Invalid IP Address'
+        
+        # Validate hostname (if provided and not empty)
+        if self.hostname and not validators.hostname(self.hostname):
+            errors['hostname'] = 'Invalid Hostname'
+        
+        if errors:
+            raise ValidationError(errors)
+    
+    def save(self, *args, **kwargs):
+        """Override save to ensure validation runs."""
+        # Always call our custom clean() method which has validation logic
+        self.clean()
+        super().save(*args, **kwargs)
 
     def is_hidden(self):
         return self.nickname is None and not self.online()
@@ -54,6 +85,33 @@ class Port(models.Model):
     first_seen = models.DateTimeField('first_seen')
     last_seen = models.DateTimeField('last_seen')
 
+    def clean(self):
+        """Validate port fields."""
+        super().clean()
+        errors = {}
+        
+        # Validate required fields
+        if not self.device:
+            errors['device'] = 'device not found'
+        
+        if self.port_num is None or str(self.port_num) == '':
+            errors['port_num'] = 'missing port number'
+        
+        if not self.protocol:
+            errors['protocol'] = 'missing protocol'
+        
+        if not self.name:
+            errors['name'] = 'missing port name'
+        
+        if errors:
+            raise ValidationError(errors)
+    
+    def save(self, *args, **kwargs):
+        """Override save to ensure validation runs."""
+        # Always call our custom clean() method which has validation logic
+        self.clean()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return str(self.device) + " - " + str(self.name) + "(" + str(self.port_num) + ")"
 
@@ -73,6 +131,28 @@ class Sensor(models.Model):
     first_seen = models.DateTimeField('first_seen')
     last_seen = models.DateTimeField('last_seen')
     last_notified_timeout = models.DateTimeField('last_notified_timeout', blank=True, null=True)
+
+    def clean(self):
+        """Validate sensor fields."""
+        super().clean()
+        errors = {}
+        
+        # Validate MAC address
+        if not self.mac:
+            errors['mac'] = 'Unknown Sensor MAC'
+        
+        # Validate hostname
+        if not self.hostname:
+            errors['hostname'] = 'unknown sensor Hostname'
+        
+        if errors:
+            raise ValidationError(errors)
+    
+    def save(self, *args, **kwargs):
+        """Override save to ensure validation runs."""
+        # Always call our custom clean() method which has validation logic
+        self.clean()
+        super().save(*args, **kwargs)
 
     def time_since_last_seen(self):
         return int((timezone.now() - self.last_seen).total_seconds() / 60)
