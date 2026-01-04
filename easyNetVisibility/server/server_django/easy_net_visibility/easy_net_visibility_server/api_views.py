@@ -3,6 +3,7 @@ import logging
 import traceback
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import get_token
 from rest_framework.decorators import api_view
@@ -17,6 +18,34 @@ from .pushover_notifier import get_notifier
 _LAST_SEEN_THRESHOLD_MINUTES = 0
 
 _logger = logging.getLogger(__name__)
+
+
+def _extract_validation_errors(e):
+    """
+    Extract all validation error messages from a ValidationError.
+    Returns a string with all errors combined.
+    """
+    messages = []
+    if hasattr(e, 'message_dict'):
+        for field, errors in e.message_dict.items():
+            # Normalize errors to a list
+            if isinstance(errors, (list, tuple)):
+                field_errors = [str(err) for err in errors]
+            else:
+                field_errors = [str(errors)]
+
+            for msg in field_errors:
+                if field:
+                    messages.append(f"{field}: {msg}")
+                else:
+                    messages.append(msg)
+    elif hasattr(e, 'messages'):
+        messages.extend(str(msg) for msg in e.messages)
+
+    if not messages:
+        messages.append(str(e))
+
+    return "; ".join(messages)
 
 
 def _client_expects_json(request):
@@ -72,17 +101,10 @@ def _process_device(device: Device, existing_devices_map):
     Helper to add or update a device. Returns (status_code: int, error: str or None)
     existing_devices_map: dict mapping mac -> Device
     """
-    if len(device.mac) == 0:
-        return 400, "Must Supply MAC Address"
-    if not validators.mac_address(device.mac):
-        return 400, "Invalid MAC Address"
-    if len(device.ip) > 0 and not validators.ip_address(device.ip):
-        return 400, "Invalid IP Address"
-    if len(device.hostname) > 0 and not validators.hostname(device.hostname):
-        return 400, "Invalid Hostname"
     now = datetime.datetime.now()
     if device.mac not in existing_devices_map:
         try:
+            # Model validation will occur in save()
             device.save()
             # Send Pushover notification for new device
             try:
@@ -96,6 +118,9 @@ def _process_device(device: Device, existing_devices_map):
                     e,
                 )
             return 200, None
+        except ValidationError as e:
+            # Extract all validation error messages
+            return 400, _extract_validation_errors(e)
         except Exception as e:
             _logger.exception(f"Error adding device: {e}")
             return 500, f"Error adding device: {str(e)}"
@@ -119,6 +144,9 @@ def _process_device(device: Device, existing_devices_map):
                 existing_device.last_seen = now
                 existing_device.save()
                 return 200, None
+            except ValidationError as e:
+                # Extract all validation error messages
+                return 400, _extract_validation_errors(e)
             except Exception as e:
                 traceback.print_exc()
                 return 500, f"Error updating device: {str(e)}"
@@ -204,6 +232,11 @@ def _process_port(port_data, existing_devices_map, existing_ports_map):
 
     if mac:
         mac = validators.convert_mac(mac)
+
+    # Early validation of required fields before checking device existence.
+    # This provides better error messages to API clients and maintains backward
+    # compatibility with existing API behavior where field validation errors
+    # are reported before device existence errors.
     if len(mac) == 0:
         return 400, 'missing mac address'
     if len(port_num) == 0:
@@ -230,8 +263,12 @@ def _process_port(port_data, existing_devices_map, existing_ports_map):
             port_obj.version = version
             port_obj.first_seen = now
             port_obj.last_seen = now
+            # Model validation will occur in save()
             port_obj.save()
             return 200, None
+        except ValidationError as e:
+            # Extract all validation error messages
+            return 400, _extract_validation_errors(e)
         except Exception as e:
             traceback.print_exc()
             return 500, f'Error adding port: {str(e)}'
@@ -302,6 +339,7 @@ def sensor_health(request):
     sensor_mac = data.get('mac', '')
     sensor_hostname = data.get('hostname', '')
 
+    # API-level validation (required for this endpoint, even though model allows None)
     if len(sensor_mac) == 0:
         return _return_error('Unknown Sensor MAC', status=400, request=request)
     if len(sensor_hostname) == 0:
@@ -316,7 +354,11 @@ def sensor_health(request):
     sensors = Sensor.objects.filter(mac=sensor_mac)
     if len(sensors) == 0:
         try:
+            # Model validation will occur in save()
             sensor_info.save()
+        except ValidationError as e:
+            # Extract all validation error messages
+            return _return_error(_extract_validation_errors(e), status=400, request=request)
         except Exception as e:
             traceback.print_exc()
             return _return_error('Error :' + str(e), request=request)
@@ -326,6 +368,9 @@ def sensor_health(request):
             sensor.hostname = sensor_info.hostname
             sensor.last_seen = datetime.datetime.now()
             sensor.save()
+        except ValidationError as e:
+            # Extract all validation error messages
+            return _return_error(_extract_validation_errors(e), status=400, request=request)
         except Exception as e:
             traceback.print_exc()
             return _return_error('Error :' + str(e), request=request)

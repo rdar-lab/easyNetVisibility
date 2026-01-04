@@ -1,7 +1,10 @@
 import datetime
 
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
+
+from . import validators
 
 
 # Create your models here.
@@ -16,6 +19,35 @@ class Device(models.Model):
     first_seen = models.DateTimeField('first_seen')
     last_seen = models.DateTimeField('last_seen')
     last_notified_offline = models.DateTimeField('last_notified_offline', blank=True, null=True)
+
+    def clean(self):
+        """Validate device fields."""
+        super().clean()
+        errors = {}
+
+        # Validate MAC address
+        if not self.mac:
+            errors['mac'] = 'Must Supply MAC Address'
+        elif not validators.mac_address(self.mac):
+            errors['mac'] = 'Invalid MAC Address'
+
+        # Validate IP address (if provided and not empty)
+        if self.ip and not validators.ip_address(self.ip):
+            errors['ip'] = 'Invalid IP Address'
+
+        # Validate hostname (if provided and not empty)
+        if self.hostname and not validators.hostname(self.hostname):
+            errors['hostname'] = 'Invalid Hostname'
+
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        """Override save to ensure validation runs."""
+        # Skip full validation when doing a partial update with update_fields
+        if 'update_fields' not in kwargs:
+            self.clean()
+        super().save(*args, **kwargs)
 
     def is_hidden(self):
         return self.nickname is None and not self.online()
@@ -54,6 +86,28 @@ class Port(models.Model):
     first_seen = models.DateTimeField('first_seen')
     last_seen = models.DateTimeField('last_seen')
 
+    def clean(self):
+        """Validate port fields."""
+        super().clean()
+        errors = {}
+
+        # Validate port_num is provided
+        if self.port_num is None:
+            errors['port_num'] = 'missing port number'
+
+        # Note: protocol and name are optional (blank=True, null=True)
+        # API-level validation may require them, but model allows None
+
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        """Override save to ensure validation runs."""
+        # Skip full validation when doing a partial update with update_fields
+        if 'update_fields' not in kwargs:
+            self.clean()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return str(self.device) + " - " + str(self.name) + "(" + str(self.port_num) + ")"
 
@@ -73,6 +127,30 @@ class Sensor(models.Model):
     first_seen = models.DateTimeField('first_seen')
     last_seen = models.DateTimeField('last_seen')
     last_notified_timeout = models.DateTimeField('last_notified_timeout', blank=True, null=True)
+
+    def clean(self):
+        """Validate sensor fields."""
+        super().clean()
+        errors = {}
+
+        # Validate MAC address (required and format)
+        if not self.mac:
+            errors['mac'] = 'Unknown Sensor MAC'
+        elif not validators.mac_address(self.mac):
+            errors['mac'] = 'Invalid MAC Address'
+
+        # Note: hostname is optional (blank=True, null=True)
+        # API-level validation may require it, but model allows None
+
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        """Override save to ensure validation runs."""
+        # Skip full validation when doing a partial update with update_fields
+        if 'update_fields' not in kwargs:
+            self.clean()
+        super().save(*args, **kwargs)
 
     def time_since_last_seen(self):
         return int((timezone.now() - self.last_seen).total_seconds() / 60)

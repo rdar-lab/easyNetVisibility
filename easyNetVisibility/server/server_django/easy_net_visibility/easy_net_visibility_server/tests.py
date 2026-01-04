@@ -221,7 +221,7 @@ class TestDeviceView(TestCase):
             nickname='OldName',
             hostname='rename-host',
             ip='192.168.1.101',
-            mac='AABBCCDDEERN',
+            mac='AABBCCDDEEF1',
             vendor='TestVendor',
             first_seen=timezone.now(),
             last_seen=timezone.now()

@@ -3,6 +3,7 @@ from collections import defaultdict
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.messages import add_message, constants
+from django.core.exceptions import ValidationError
 from django.shortcuts import render
 
 from .models import Device, Sensor
@@ -61,7 +62,7 @@ def rename_device(request):
         nickname = request.POST['nickname']
 
         if nickname is None or len(nickname) == 0:
-            raise Exception("Nickname must not be empty")
+            raise ValidationError("Nickname must not be empty")
 
         device = Device.objects.get(pk=device_id)
         if device is None:
@@ -70,6 +71,8 @@ def rename_device(request):
         device.nickname = nickname
         device.save()
         add_message(request, constants.INFO, "Device updated successfully")
+    except ValidationError as exp:
+        add_message(request, constants.WARNING, str(exp))
     except Exception as exp:
         add_message(request, constants.WARNING, str(exp))
 
