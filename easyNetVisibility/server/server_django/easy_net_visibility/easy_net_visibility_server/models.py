@@ -24,24 +24,24 @@ class Device(models.Model):
         """Validate device fields."""
         super().clean()
         errors = {}
-        
+
         # Validate MAC address
         if not self.mac:
             errors['mac'] = 'Must Supply MAC Address'
         elif not validators.mac_address(self.mac):
             errors['mac'] = 'Invalid MAC Address'
-        
+
         # Validate IP address (if provided and not empty)
         if self.ip and not validators.ip_address(self.ip):
             errors['ip'] = 'Invalid IP Address'
-        
+
         # Validate hostname (if provided and not empty)
         if self.hostname and not validators.hostname(self.hostname):
             errors['hostname'] = 'Invalid Hostname'
-        
+
         if errors:
             raise ValidationError(errors)
-    
+
     def save(self, *args, **kwargs):
         """Override save to ensure validation runs."""
         # Always call our custom clean() method which has validation logic
@@ -89,23 +89,23 @@ class Port(models.Model):
         """Validate port fields."""
         super().clean()
         errors = {}
-        
+
         # Validate required fields
         if not self.device:
             errors['device'] = 'device not found'
-        
-        if self.port_num is None or str(self.port_num) == '':
+
+        if self.port_num is None:
             errors['port_num'] = 'missing port number'
-        
+
         if not self.protocol:
             errors['protocol'] = 'missing protocol'
-        
+
         if not self.name:
             errors['name'] = 'missing port name'
-        
+
         if errors:
             raise ValidationError(errors)
-    
+
     def save(self, *args, **kwargs):
         """Override save to ensure validation runs."""
         # Always call our custom clean() method which has validation logic
@@ -136,18 +136,18 @@ class Sensor(models.Model):
         """Validate sensor fields."""
         super().clean()
         errors = {}
-        
+
         # Validate MAC address
         if not self.mac:
             errors['mac'] = 'Unknown Sensor MAC'
-        
+
         # Validate hostname
         if not self.hostname:
             errors['hostname'] = 'unknown sensor Hostname'
-        
+
         if errors:
             raise ValidationError(errors)
-    
+
     def save(self, *args, **kwargs):
         """Override save to ensure validation runs."""
         # Always call our custom clean() method which has validation logic

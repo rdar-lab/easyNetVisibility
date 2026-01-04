@@ -210,9 +210,11 @@ def _process_port(port_data, existing_devices_map, existing_ports_map):
 
     if mac:
         mac = validators.convert_mac(mac)
-    
-    # Early validation of required fields (for backward compatibility with tests)
-    # This allows us to report field-specific errors before checking if device exists
+
+    # Early validation of required fields before checking device existence.
+    # This provides better error messages to API clients and maintains backward
+    # compatibility with existing API behavior where field validation errors
+    # are reported before device existence errors.
     if len(mac) == 0:
         return 400, 'missing mac address'
     if len(port_num) == 0:
@@ -221,7 +223,7 @@ def _process_port(port_data, existing_devices_map, existing_ports_map):
         return 400, 'missing protocol'
     if len(name) == 0:
         return 400, 'missing port name'
-    
+
     device = existing_devices_map.get(mac)
     if not device:
         return 400, 'device not found'
