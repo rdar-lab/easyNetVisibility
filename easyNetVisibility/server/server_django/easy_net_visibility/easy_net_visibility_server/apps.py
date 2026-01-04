@@ -1,5 +1,6 @@
-from django.apps import AppConfig
 import logging
+
+from django.apps import AppConfig
 
 logger = logging.getLogger(__name__)
 
@@ -14,13 +15,13 @@ class EasyNetVisibilityServerConfig(AppConfig):
         # Only start monitoring service in production environments
         # Skip for management commands and tests
         import sys
-        
+
         # Check if we're running the main Django server (not management commands or tests)
         is_main_process = (
-            'runserver' not in sys.argv and
-            'test' not in sys.argv
+                'runserver' not in sys.argv and
+                'test' not in sys.argv
         )
-        
+
         if is_main_process:
             try:
                 from easy_net_visibility_server.monitoring_service import get_monitoring_service
@@ -29,4 +30,3 @@ class EasyNetVisibilityServerConfig(AppConfig):
                 logger.info("Network monitoring service started successfully")
             except Exception as e:
                 logger.error(f"Failed to start network monitoring service: {e}")
-

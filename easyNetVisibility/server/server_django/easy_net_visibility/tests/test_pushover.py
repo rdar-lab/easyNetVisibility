@@ -1,9 +1,9 @@
 from unittest.mock import patch, MagicMock
+
 from django.test import TestCase, override_settings
 from django.utils import timezone
 from easy_net_visibility_server.models import Device
 from easy_net_visibility_server.pushover_notifier import PushoverNotifier
-
 
 # Test configuration with Pushover enabled
 PUSHOVER_TEST_CONFIG = {
@@ -25,7 +25,7 @@ class TestPushoverNotifier(TestCase):
     def test_notifier_initialization_success(self, mock_client):
         """Test successful initialization of Pushover notifier"""
         notifier = PushoverNotifier()
-        
+
         self.assertTrue(notifier.enabled)
         self.assertTrue(notifier.alert_new_device)
         self.assertTrue(notifier.alert_gateway_timeout)
@@ -38,7 +38,7 @@ class TestPushoverNotifier(TestCase):
     def test_notifier_disabled(self):
         """Test notifier is disabled when configured as such"""
         notifier = PushoverNotifier()
-        
+
         self.assertFalse(notifier.enabled)
 
     @override_settings()
@@ -48,9 +48,9 @@ class TestPushoverNotifier(TestCase):
         from django.conf import settings
         if hasattr(settings, 'PUSHOVER_CONFIG'):
             delattr(settings, 'PUSHOVER_CONFIG')
-        
+
         notifier = PushoverNotifier()
-        
+
         self.assertFalse(notifier.enabled)
 
     @patch('easy_net_visibility_server.pushover_notifier.PushoverAPI')
@@ -59,10 +59,10 @@ class TestPushoverNotifier(TestCase):
         """Test sending a notification successfully"""
         mock_client = MagicMock()
         mock_client_class.return_value = mock_client
-        
+
         notifier = PushoverNotifier()
         notifier.send_notification("Test message", "Test Title", priority=1)
-        
+
         mock_client.send_message.assert_called_once_with(
             'test_user_key', "Test message", title="Test Title", priority=1
         )
@@ -73,14 +73,14 @@ class TestPushoverNotifier(TestCase):
         """Test new device notification"""
         mock_client = MagicMock()
         mock_client_class.return_value = mock_client
-        
+
         notifier = PushoverNotifier()
         notifier.notify_new_device("test-device", "192.168.1.100", "AA:BB:CC:DD:EE:FF")
-        
+
         # Verify send_message was called
         mock_client.send_message.assert_called_once()
         call_args = mock_client.send_message.call_args
-        
+
         # Check the message content (first arg is user_key, second is message)
         self.assertEqual(call_args[0][0], 'test_user_key')
         self.assertIn("test-device", call_args[0][1])
@@ -94,14 +94,14 @@ class TestPushoverNotifier(TestCase):
         """Test gateway timeout notification"""
         mock_client = MagicMock()
         mock_client_class.return_value = mock_client
-        
+
         notifier = PushoverNotifier()
         notifier.notify_gateway_timeout("gateway-1", 15)
-        
+
         # Verify send_message was called
         mock_client.send_message.assert_called_once()
         call_args = mock_client.send_message.call_args
-        
+
         # Check the message content (first arg is user_key, second is message)
         self.assertEqual(call_args[0][0], 'test_user_key')
         self.assertIn("gateway-1", call_args[0][1])
@@ -115,14 +115,14 @@ class TestPushoverNotifier(TestCase):
         """Test device offline notification"""
         mock_client = MagicMock()
         mock_client_class.return_value = mock_client
-        
+
         notifier = PushoverNotifier()
         notifier.notify_device_offline("offline-device", "192.168.1.200", "11:22:33:44:55:66")
-        
+
         # Verify send_message was called
         mock_client.send_message.assert_called_once()
         call_args = mock_client.send_message.call_args
-        
+
         # Check the message content (first arg is user_key, second is message)
         self.assertEqual(call_args[0][0], 'test_user_key')
         self.assertIn("offline-device", call_args[0][1])
@@ -136,10 +136,10 @@ class TestPushoverNotifier(TestCase):
         """Test notifications are not sent when alert type is disabled"""
         mock_client = MagicMock()
         mock_client_class.return_value = mock_client
-        
+
         notifier = PushoverNotifier()
         notifier.notify_new_device("test-device", "192.168.1.100", "AA:BB:CC:DD:EE:FF")
-        
+
         # Verify send_message was NOT called
         mock_client.send_message.assert_not_called()
 
@@ -154,9 +154,9 @@ class TestPushoverIntegration(TestCase):
         """Test that adding a new device triggers a Pushover notification"""
         mock_notifier = MagicMock()
         mock_get_notifier.return_value = mock_notifier
-        
+
         from easy_net_visibility_server.api_views import _process_device, _create_device_obj_from_data
-        
+
         # Create a new device
         device_data = {
             'hostname': 'new-device',
@@ -165,14 +165,14 @@ class TestPushoverIntegration(TestCase):
             'vendor': 'TestVendor'
         }
         device = _create_device_obj_from_data(device_data)
-        
+
         # Process the device (should trigger notification)
         status, error = _process_device(device, {})
-        
+
         # Verify the device was added successfully
         self.assertEqual(status, 200)
         self.assertIsNone(error)
-        
+
         # Verify notification was triggered
         mock_notifier.notify_new_device.assert_called_once()
         call_args = mock_notifier.notify_new_device.call_args[0]
@@ -188,7 +188,7 @@ class TestPushoverIntegration(TestCase):
         """Test that updating an existing device does not trigger notification"""
         mock_notifier = MagicMock()
         mock_get_notifier.return_value = mock_notifier
-        
+
         # Create an existing device with normalized MAC address
         existing = Device.objects.create(
             hostname='existing-device',
@@ -198,9 +198,9 @@ class TestPushoverIntegration(TestCase):
             first_seen=timezone.now(),
             last_seen=timezone.now()
         )
-        
+
         from easy_net_visibility_server.api_views import _process_device, _create_device_obj_from_data
-        
+
         # Update the existing device
         device_data = {
             'hostname': 'existing-device',
@@ -210,13 +210,13 @@ class TestPushoverIntegration(TestCase):
         }
         device = _create_device_obj_from_data(device_data)
         existing_map = {existing.mac: existing}
-        
+
         # Process the device (should NOT trigger notification)
         status, error = _process_device(device, existing_map)
-        
+
         # Verify the device was updated successfully
         self.assertEqual(status, 200)
         self.assertIsNone(error)
-        
+
         # Verify notification was NOT triggered
         mock_notifier.notify_new_device.assert_not_called()

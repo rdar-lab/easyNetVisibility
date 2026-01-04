@@ -1,10 +1,11 @@
-from django.http import HttpResponse
-from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
-from .models import Device, Port, Sensor
-from django.contrib.messages import add_message, constants
 import ipaddress
 from collections import defaultdict
+
+from django.contrib.auth.decorators import login_required
+from django.contrib.messages import add_message, constants
+from django.shortcuts import render
+
+from .models import Device, Sensor
 
 
 def get_subnet(ip_address, prefix_length=24):
@@ -26,13 +27,13 @@ def get_subnet(ip_address, prefix_length=24):
 def home(request):
     devices_list = Device.objects.prefetch_related('port_set').order_by('ip')
     visible_devices = [device for device in devices_list if not device.is_hidden()]
-    
+
     # Group devices by subnet
     devices_by_subnet = defaultdict(list)
     for device in visible_devices:
         subnet = get_subnet(device.ip)
         devices_by_subnet[subnet].append(device)
-    
+
     # Convert to sorted list of tuples (subnet, devices) for template
     # Sort by network address for proper ordering
     def sort_key(item):
@@ -44,9 +45,9 @@ def home(request):
             return (0, ipaddress.ip_network(subnet_str))
         except (ValueError, ipaddress.AddressValueError):
             return (1, subnet_str)
-    
+
     grouped_devices = sorted(devices_by_subnet.items(), key=sort_key)
-    
+
     return render(request, 'home.html', {
         'deviceList': visible_devices,
         'groupedDevices': grouped_devices

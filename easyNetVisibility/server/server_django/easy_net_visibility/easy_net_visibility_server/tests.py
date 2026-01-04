@@ -135,16 +135,16 @@ class TestDeviceView(TestCase):
             first_seen=timezone.now(),
             last_seen=timezone.now()
         )
-        
+
         response = self.client.get(reverse('home'))
         response_content = response.content.decode()
         self.assertEqual(response.status_code, 200)
-        
+
         # Check that subnet headers are present
         self.assertIn('Subnet:', response_content)
         self.assertIn('192.168.1.0/24', response_content)
         self.assertIn('192.168.2.0/24', response_content)
-        
+
         # Check that devices are displayed
         self.assertIn('Device1', response_content)
         self.assertIn('Device2', response_content)
@@ -181,7 +181,7 @@ class TestDeviceView(TestCase):
             last_seen=timezone.now()
         )
         # Add ports to device
-        port1 = Port.objects.create(
+        Port.objects.create(
             device=device,
             port_num=80,
             protocol='TCP',
@@ -191,7 +191,7 @@ class TestDeviceView(TestCase):
             first_seen=timezone.now(),
             last_seen=timezone.now()
         )
-        port2 = Port.objects.create(
+        Port.objects.create(
             device=device,
             port_num=443,
             protocol='TCP',
@@ -249,7 +249,7 @@ class TestDeviceView(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Device.objects.filter(id=invalid_id).exists())
         # The response should contain the capitalized warning message
-        self.assertContains(response, f"Device matching query does not exist")
+        self.assertContains(response, "Device matching query does not exist")
 
     def test_rename_device_invalid_id(self):
         # Try to rename a device that does not exist
@@ -261,7 +261,7 @@ class TestDeviceView(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Device.objects.filter(id=invalid_id).exists())
         # The response should contain the capitalized warning message
-        self.assertContains(response, f"Device matching query does not exist")
+        self.assertContains(response, "Device matching query does not exist")
 
 
 class BaseDeviceApiTest(ABC, TestCase):
@@ -684,8 +684,10 @@ class TestAddPortsApi(TestCase):
     def test_batch_add_all_valid(self):
         payload = {
             'ports': [
-                {'mac': 'AA:BB:CC:DD:EE:10', 'port': '80', 'protocol': 'TCP', 'name': 'http', 'version': '1.0', 'product': 'nginx'},
-                {'mac': 'AA:BB:CC:DD:EE:10', 'port': '443', 'protocol': 'TCP', 'name': 'https', 'version': '1.0', 'product': 'nginx'}
+                {'mac': 'AA:BB:CC:DD:EE:10', 'port': '80', 'protocol': 'TCP', 'name': 'http', 'version': '1.0',
+                 'product': 'nginx'},
+                {'mac': 'AA:BB:CC:DD:EE:10', 'port': '443', 'protocol': 'TCP', 'name': 'https', 'version': '1.0',
+                 'product': 'nginx'}
             ]
         }
         response = self.post_json(payload)
@@ -731,7 +733,8 @@ class TestAddPortsApi(TestCase):
         )
         payload = {
             'ports': [
-                {'mac': 'AA:BB:CC:DD:EE:10', 'port': '8080', 'protocol': 'TCP', 'name': 'http', 'version': '2.0', 'product': 'nginx2'}
+                {'mac': 'AA:BB:CC:DD:EE:10', 'port': '8080', 'protocol': 'TCP', 'name': 'http', 'version': '2.0',
+                 'product': 'nginx2'}
             ]
         }
         response = self.post_json(payload)

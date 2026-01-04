@@ -18,6 +18,7 @@ _LAST_SEEN_THRESHOLD_MINUTES = 0
 
 _logger = logging.getLogger(__name__)
 
+
 def _client_expects_json(request):
     # Accepts JSON if header or ?format=json
     accept = request.META.get('HTTP_ACCEPT', '')
@@ -26,6 +27,7 @@ def _client_expects_json(request):
     if request.GET.get('format', '').lower() == 'json':
         return True
     return False
+
 
 def _read_device_details_from_request_body(request):
     # Use request.data for DRF, fallback to request.POST
@@ -163,7 +165,6 @@ def add_device(request):
         return _return_success("Device information processed", request=request)
     else:
         return _return_error(err, status=status_code, request=request)
-
 
 
 @api_view(['POST'])

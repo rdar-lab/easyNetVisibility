@@ -1,8 +1,7 @@
-from datetime import datetime
-
 import logging
 import os
 import xml.etree.ElementTree as ElementTree
+from datetime import datetime
 
 import network_utils
 
