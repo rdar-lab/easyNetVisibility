@@ -137,13 +137,12 @@ class Sensor(models.Model):
         super().clean()
         errors = {}
 
-        # Validate MAC address
+        # Validate MAC address (required)
         if not self.mac:
             errors['mac'] = 'Unknown Sensor MAC'
 
-        # Validate hostname
-        if not self.hostname:
-            errors['hostname'] = 'unknown sensor Hostname'
+        # Note: hostname is optional (blank=True, null=True)
+        # API-level validation may require it, but model allows None
 
         if errors:
             raise ValidationError(errors)

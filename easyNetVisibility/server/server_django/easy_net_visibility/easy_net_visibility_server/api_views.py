@@ -320,6 +320,12 @@ def sensor_health(request):
     sensor_mac = data.get('mac', '')
     sensor_hostname = data.get('hostname', '')
 
+    # API-level validation (required for this endpoint, even though model allows None)
+    if len(sensor_mac) == 0:
+        return _return_error('Unknown Sensor MAC', status=400, request=request)
+    if len(sensor_hostname) == 0:
+        return _return_error('unknown sensor Hostname', status=400, request=request)
+
     sensor_info = Sensor()
     sensor_info.mac = sensor_mac
     sensor_info.hostname = sensor_hostname
