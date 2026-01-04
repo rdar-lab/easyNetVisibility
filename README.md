@@ -1185,6 +1185,15 @@ If needed, releases can also be triggered manually via GitHub Actions:
 3. Click "Run workflow"
 4. Enter the version tag (e.g., `v1.0.0`)
 5. Click "Run workflow" to start the build
+
+### Version Tag Types
+
+The workflow automatically handles different version types:
+
+- **Stable releases** (e.g., `v1.0.0`, `v2.1.3`): Tagged with version AND `latest` on Docker Hub, created as regular GitHub releases
+- **Pre-releases** (e.g., `v0.0.1-test`, `v1.0.0-alpha`, `v2.0.0-rc1`): Tagged with version number only (does NOT update `latest`), created as pre-release on GitHub
+
+This ensures test versions don't affect production users pulling `latest` images.
 ```
 
 ## API Documentation

@@ -33,6 +33,23 @@ If the secrets are not yet configured:
    - Value: Paste the token
    - Click **Add secret**
 
+## Version Tag Behavior
+
+The workflow automatically detects version types:
+
+- **Stable releases** (e.g., `v1.0.0`, `v2.1.3`):
+  - Tagged with version number AND `latest` on Docker Hub
+  - Created as regular GitHub releases
+  - Example: `rdxmaster/easy-net-visibility-server-django:1.0.0` and `rdxmaster/easy-net-visibility-server-django:latest`
+
+- **Pre-releases** (e.g., `v0.0.1-test`, `v1.0.0-alpha`, `v2.0.0-rc1`):
+  - Tagged with version number ONLY (does NOT update `latest`)
+  - Created as pre-release on GitHub
+  - Prevents test versions from affecting production users
+  - Example: Only `rdxmaster/easy-net-visibility-server-django:0.0.1-test` is created
+
+**Note:** Any version containing a hyphen followed by letters (e.g., `-test`, `-alpha`, `-beta`, `-rc`) is treated as a pre-release.
+
 ## Manual Testing (Recommended First Test)
 
 The safest way to test is using the manual workflow dispatch:
@@ -46,13 +63,12 @@ The safest way to test is using the manual workflow dispatch:
 ### What to Expect
 
 The workflow will:
-1. Build Docker images for server and sensor
+1. Build Docker images for server and sensor from the specified tag
 2. Push images to Docker Hub with tags:
    - `rdxmaster/easy-net-visibility-server-django:0.0.1-test`
-   - `rdxmaster/easy-net-visibility-server-django:latest`
    - `rdxmaster/easy-net-visibility-sensor:0.0.1-test`
-   - `rdxmaster/easy-net-visibility-sensor:latest`
-3. Create a GitHub Release for tag `v0.0.1-test`
+   - **Note:** Pre-release versions (containing `-test`, `-alpha`, `-beta`, `-rc`) will NOT update the `latest` tag
+3. Create a GitHub Release for tag `v0.0.1-test` marked as pre-release
 
 ### Verify the Results
 
@@ -63,12 +79,14 @@ The workflow will:
 2. **Check GitHub Releases**:
    - Go to [Releases](https://github.com/rdar-lab/easyNetVisibility/releases)
    - Verify `v0.0.1-test` release exists
+   - Confirm it's marked as "Pre-release"
    - Check release notes are generated
 
 3. **Check Docker Hub**:
    - Server: https://hub.docker.com/r/rdxmaster/easy-net-visibility-server-django/tags
    - Sensor: https://hub.docker.com/r/rdxmaster/easy-net-visibility-sensor/tags
-   - Verify `0.0.1-test` and `latest` tags exist
+   - Verify `0.0.1-test` tag exists
+   - Confirm `latest` tag was NOT updated (points to previous stable release)
 
 4. **Test Docker Images**:
    ```bash
