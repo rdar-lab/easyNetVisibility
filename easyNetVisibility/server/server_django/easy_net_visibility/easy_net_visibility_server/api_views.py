@@ -20,6 +20,34 @@ _LAST_SEEN_THRESHOLD_MINUTES = 0
 _logger = logging.getLogger(__name__)
 
 
+def _extract_validation_errors(e):
+    """
+    Extract all validation error messages from a ValidationError.
+    Returns a string with all errors combined.
+    """
+    messages = []
+    if hasattr(e, 'message_dict'):
+        for field, errors in e.message_dict.items():
+            # Normalize errors to a list
+            if isinstance(errors, (list, tuple)):
+                field_errors = [str(err) for err in errors]
+            else:
+                field_errors = [str(errors)]
+
+            for msg in field_errors:
+                if field:
+                    messages.append(f"{field}: {msg}")
+                else:
+                    messages.append(msg)
+    elif hasattr(e, 'messages'):
+        messages.extend(str(msg) for msg in e.messages)
+
+    if not messages:
+        messages.append(str(e))
+
+    return "; ".join(messages)
+
+
 def _client_expects_json(request):
     # Accepts JSON if header or ?format=json
     accept = request.META.get('HTTP_ACCEPT', '')
@@ -91,11 +119,8 @@ def _process_device(device: Device, existing_devices_map):
                 )
             return 200, None
         except ValidationError as e:
-            # Extract validation error messages
-            if hasattr(e, 'message_dict'):
-                for field, errors in e.message_dict.items():
-                    return 400, errors[0] if isinstance(errors, list) else str(errors)
-            return 400, str(e)
+            # Extract all validation error messages
+            return 400, _extract_validation_errors(e)
         except Exception as e:
             _logger.exception(f"Error adding device: {e}")
             return 500, f"Error adding device: {str(e)}"
@@ -120,11 +145,8 @@ def _process_device(device: Device, existing_devices_map):
                 existing_device.save()
                 return 200, None
             except ValidationError as e:
-                # Extract validation error messages
-                if hasattr(e, 'message_dict'):
-                    for field, errors in e.message_dict.items():
-                        return 400, errors[0] if isinstance(errors, list) else str(errors)
-                return 400, str(e)
+                # Extract all validation error messages
+                return 400, _extract_validation_errors(e)
             except Exception as e:
                 traceback.print_exc()
                 return 500, f"Error updating device: {str(e)}"
@@ -245,11 +267,8 @@ def _process_port(port_data, existing_devices_map, existing_ports_map):
             port_obj.save()
             return 200, None
         except ValidationError as e:
-            # Extract validation error messages
-            if hasattr(e, 'message_dict'):
-                for field, errors in e.message_dict.items():
-                    return 400, errors[0] if isinstance(errors, list) else str(errors)
-            return 400, str(e)
+            # Extract all validation error messages
+            return 400, _extract_validation_errors(e)
         except Exception as e:
             traceback.print_exc()
             return 500, f'Error adding port: {str(e)}'
@@ -338,12 +357,8 @@ def sensor_health(request):
             # Model validation will occur in save()
             sensor_info.save()
         except ValidationError as e:
-            # Extract validation error messages
-            if hasattr(e, 'message_dict'):
-                for field, errors in e.message_dict.items():
-                    error_msg = errors[0] if isinstance(errors, list) else str(errors)
-                    return _return_error(error_msg, status=400, request=request)
-            return _return_error(str(e), status=400, request=request)
+            # Extract all validation error messages
+            return _return_error(_extract_validation_errors(e), status=400, request=request)
         except Exception as e:
             traceback.print_exc()
             return _return_error('Error :' + str(e), request=request)
@@ -353,6 +368,9 @@ def sensor_health(request):
             sensor.hostname = sensor_info.hostname
             sensor.last_seen = datetime.datetime.now()
             sensor.save()
+        except ValidationError as e:
+            # Extract all validation error messages
+            return _return_error(_extract_validation_errors(e), status=400, request=request)
         except Exception as e:
             traceback.print_exc()
             return _return_error('Error :' + str(e), request=request)

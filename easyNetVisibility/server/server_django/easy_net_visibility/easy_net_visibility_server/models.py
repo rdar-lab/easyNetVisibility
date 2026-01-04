@@ -44,8 +44,9 @@ class Device(models.Model):
 
     def save(self, *args, **kwargs):
         """Override save to ensure validation runs."""
-        # Always call our custom clean() method which has validation logic
-        self.clean()
+        # Skip full validation when doing a partial update with update_fields
+        if 'update_fields' not in kwargs:
+            self.clean()
         super().save(*args, **kwargs)
 
     def is_hidden(self):
@@ -90,26 +91,21 @@ class Port(models.Model):
         super().clean()
         errors = {}
 
-        # Validate required fields
-        if not self.device:
-            errors['device'] = 'device not found'
-
+        # Validate port_num is provided
         if self.port_num is None:
             errors['port_num'] = 'missing port number'
 
-        if not self.protocol:
-            errors['protocol'] = 'missing protocol'
-
-        if not self.name:
-            errors['name'] = 'missing port name'
+        # Note: protocol and name are optional (blank=True, null=True)
+        # API-level validation may require them, but model allows None
 
         if errors:
             raise ValidationError(errors)
 
     def save(self, *args, **kwargs):
         """Override save to ensure validation runs."""
-        # Always call our custom clean() method which has validation logic
-        self.clean()
+        # Skip full validation when doing a partial update with update_fields
+        if 'update_fields' not in kwargs:
+            self.clean()
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -137,9 +133,11 @@ class Sensor(models.Model):
         super().clean()
         errors = {}
 
-        # Validate MAC address (required)
+        # Validate MAC address (required and format)
         if not self.mac:
             errors['mac'] = 'Unknown Sensor MAC'
+        elif not validators.mac_address(self.mac):
+            errors['mac'] = 'Invalid MAC Address'
 
         # Note: hostname is optional (blank=True, null=True)
         # API-level validation may require it, but model allows None
@@ -149,8 +147,9 @@ class Sensor(models.Model):
 
     def save(self, *args, **kwargs):
         """Override save to ensure validation runs."""
-        # Always call our custom clean() method which has validation logic
-        self.clean()
+        # Skip full validation when doing a partial update with update_fields
+        if 'update_fields' not in kwargs:
+            self.clean()
         super().save(*args, **kwargs)
 
     def time_since_last_seen(self):
