@@ -12,22 +12,12 @@ import fortigate
 
 class TestFortigateInit(unittest.TestCase):
     def test_init_sets_credentials(self):
-        """Test that init properly sets connection parameters with default VDOM"""
+        """Test that init properly sets connection parameters"""
         fortigate.init('https://192.168.1.1', 'test_api_key_12345', False)
         
         self.assertEqual(fortigate._fortigate_host, 'https://192.168.1.1')
         self.assertEqual(fortigate._fortigate_api_key, 'test_api_key_12345')
         self.assertEqual(fortigate._validate_ssl, False)
-        self.assertEqual(fortigate._vdom, 'root')  # Default is 'root'
-    
-    def test_init_with_custom_vdom(self):
-        """Test that init properly sets custom VDOM parameter"""
-        fortigate.init('https://192.168.1.1', 'test_api_key_12345', False, 'customvdom')
-        
-        self.assertEqual(fortigate._fortigate_host, 'https://192.168.1.1')
-        self.assertEqual(fortigate._fortigate_api_key, 'test_api_key_12345')
-        self.assertEqual(fortigate._validate_ssl, False)
-        self.assertEqual(fortigate._vdom, 'customvdom')
 
 
 
@@ -104,13 +94,16 @@ class TestFortigateFirewallSessions(unittest.TestCase):
     
     @patch('fortigate._make_api_request')
     def test_get_firewall_sessions_success(self, mock_request):
-        """Test successful firewall sessions retrieval"""
+        """Test successful firewall sessions retrieval with pagination"""
         mock_request.return_value = {
             'status': 'success',
-            'results': [
-                {'src': '192.168.1.10', 'srcmac': 'AA:BB:CC:DD:EE:FF', 'dst': '8.8.8.8'},
-                {'src': '192.168.1.20', 'srcmac': '00:11:22:33:44:55', 'dst': '1.1.1.1'}
-            ]
+            'results': {
+                'summary': {'matched_count': 2},
+                'details': [
+                    {'src': '192.168.1.10', 'srcmac': 'AA:BB:CC:DD:EE:FF', 'dst': '8.8.8.8'},
+                    {'src': '192.168.1.20', 'srcmac': '00:11:22:33:44:55', 'dst': '1.1.1.1'}
+                ]
+            }
         }
         
         result = fortigate.get_firewall_sessions()
@@ -118,6 +111,33 @@ class TestFortigateFirewallSessions(unittest.TestCase):
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0]['src'], '192.168.1.10')
         self.assertEqual(result[0]['srcmac'], 'AA:BB:CC:DD:EE:FF')
+    
+    @patch('fortigate._make_api_request')
+    def test_get_firewall_sessions_pagination(self, mock_request):
+        """Test firewall sessions retrieval with multiple pages"""
+        # First page
+        first_page = {
+            'status': 'success',
+            'results': {
+                'summary': {'matched_count': 150},
+                'details': [{'src': f'192.168.1.{i}', 'srcmac': 'AA:BB:CC:DD:EE:FF'} for i in range(100)]
+            }
+        }
+        # Second page
+        second_page = {
+            'status': 'success',
+            'results': {
+                'summary': {'matched_count': 150},
+                'details': [{'src': f'192.168.2.{i}', 'srcmac': 'AA:BB:CC:DD:EE:FF'} for i in range(50)]
+            }
+        }
+        
+        mock_request.side_effect = [first_page, second_page]
+        
+        result = fortigate.get_firewall_sessions()
+        
+        # Should have all 150 sessions
+        self.assertEqual(len(result), 150)
     
     @patch('fortigate._make_api_request')
     def test_get_firewall_sessions_failure(self, mock_request):
@@ -140,40 +160,6 @@ class TestFortigateFirewallSessions(unittest.TestCase):
         result = fortigate.get_firewall_sessions()
         
         self.assertEqual(result, [])
-    
-    @patch('fortigate._make_api_request')
-    def test_get_firewall_sessions_with_vdom_parameter(self, mock_request):
-        """Test that firewall sessions uses VDOM parameter"""
-        # Initialize with custom VDOM
-        fortigate.init('https://192.168.1.1', 'test_api_key_12345', False, 'customvdom')
-        
-        mock_request.return_value = {
-            'status': 'success',
-            'results': []
-        }
-        
-        fortigate.get_firewall_sessions()
-        
-        # Verify the endpoint includes the custom VDOM
-        called_endpoint = mock_request.call_args[0][0]
-        self.assertIn('vdom=customvdom', called_endpoint)
-    
-    @patch('fortigate._make_api_request')
-    def test_get_firewall_sessions_with_default_vdom(self, mock_request):
-        """Test that firewall sessions uses default 'root' VDOM"""
-        # Initialize with default VDOM
-        fortigate.init('https://192.168.1.1', 'test_api_key_12345', False)
-        
-        mock_request.return_value = {
-            'status': 'success',
-            'results': []
-        }
-        
-        fortigate.get_firewall_sessions()
-        
-        # Verify the endpoint includes the default 'root' VDOM
-        called_endpoint = mock_request.call_args[0][0]
-        self.assertIn('vdom=root', called_endpoint)
 
 
 class TestFortigateDiscoverDevices(unittest.TestCase):

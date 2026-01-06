@@ -703,10 +703,6 @@ apiKey=your_actual_api_key_here
 # Set to False only for self-signed certificates in testing
 # Use True in production with valid certificates
 validateSSL=False
-
-# Virtual Domain (VDOM) name (defaults to 'root' if not specified)
-# Uncomment and change if you use a different VDOM name
-# vdom=root
 ```
 
 **Configuration Notes**:
@@ -716,9 +712,6 @@ validateSSL=False
 - `validateSSL`: 
   - `True`: Validate SSL certificates (recommended for production)
   - `False`: Skip validation (for self-signed certificates in lab/testing)
-- `vdom`: Virtual Domain name (defaults to `root`)
-  - Default is `root` which works for most FortiGate installations
-  - Uncomment and change only if you use a different VDOM name
 
 #### How It Works
 
@@ -726,7 +719,7 @@ When Fortigate integration is enabled, the sensor will:
 
 1. **Every 10 minutes**:
    - Query DHCP leases (`/api/v2/monitor/system/dhcp/select`) for devices with active leases
-   - Query firewall sessions (`/api/v2/monitor/firewall/session`) for devices with active traffic
+   - Query firewall sessions (`/api/v2/monitor/firewall/session`) for devices with active traffic (with automatic pagination)
    - Merge data from both sources
    - Enrich firewall session devices with hostnames from DHCP
    
@@ -755,10 +748,10 @@ curl -k -H "Authorization: Bearer YOUR_API_KEY" \
 
 # Test Firewall Session API
 curl -k -H "Authorization: Bearer YOUR_API_KEY" \
-  "https://192.168.1.1/api/v2/monitor/firewall/session?vdom=root&ip_version=ipv4&start=0&count=1000&summary=true"
+  "https://192.168.1.1/api/v2/monitor/firewall/session?start=0&count=100&summary=true"
 ```
 
-Expected response: JSON with status 'success' and array of results
+Expected response: JSON with status 'success' and array of results with pagination info
 
 **Common Issues**:
 

@@ -136,15 +136,7 @@ def run():
                 else:
                     validate_ssl = True
 
-                # Get optional VDOM parameter, default to 'root'
-                vdom = 'root'
-                if config.has_option('Fortigate', 'vdom'):
-                    vdom_config = config.get('Fortigate', 'vdom')
-                    # Use configured value if not empty
-                    if vdom_config:
-                        vdom = vdom_config
-
-                fortigate.init(fortigate_host, fortigate_api_key, validate_ssl, vdom)
+                fortigate.init(fortigate_host, fortigate_api_key, validate_ssl)
 
                 # Start Fortigate scanning thread
                 fortigate_thread = threading.Thread(target=start_fortigate_scan)

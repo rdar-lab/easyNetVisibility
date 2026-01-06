@@ -16,10 +16,9 @@ _logger = logging.getLogger('EasyNetVisibility')
 _fortigate_host = None
 _fortigate_api_key = None
 _validate_ssl = True
-_vdom = 'root'  # Default VDOM
 
 
-def init(host, api_key, validate_ssl=True, vdom='root'):
+def init(host, api_key, validate_ssl=True):
     """
     Initialize Fortigate connection parameters.
 
@@ -27,16 +26,14 @@ def init(host, api_key, validate_ssl=True, vdom='root'):
         host: Fortigate IP or hostname (e.g., 'https://192.168.1.1')
         api_key: Fortigate API key for authentication
         validate_ssl: Whether to validate SSL certificates
-        vdom: Virtual Domain name (defaults to 'root')
     """
-    global _fortigate_host, _fortigate_api_key, _validate_ssl, _vdom
+    global _fortigate_host, _fortigate_api_key, _validate_ssl
 
     _fortigate_host = host
     _fortigate_api_key = api_key
     _validate_ssl = validate_ssl
-    _vdom = vdom
 
-    _logger.info(f"Fortigate integration initialized for host: {host}, VDOM: {vdom}")
+    _logger.info(f"Fortigate integration initialized for host: {host}")
 
 
 def _make_api_request(endpoint):
@@ -87,21 +84,51 @@ def get_firewall_sessions():
     Get active firewall sessions from Fortigate.
 
     This queries the firewall session table to identify devices with active traffic.
-    Only live/active devices are returned.
+    Only live/active devices are returned. Handles pagination to retrieve all sessions.
 
     Returns:
         list: List of active session entries with IP and MAC information
     """
     try:
         _logger.info("Fetching firewall sessions from Fortigate")
-        # VDOM is mandatory, start and count parameters are required to avoid 424 error
-        response = _make_api_request(f'/api/v2/monitor/firewall/session?vdom={_vdom}&ip_version=ipv4&start=0&count=1000&summary=true')
+        all_results = []
+        start = 0
+        count = 100  # Fetch 100 sessions at a time
 
-        if response.get('status') == 'success':
-            return response.get('results', [])
-        else:
-            _logger.warning(f"Fortigate firewall session request returned non-success status: {response}")
-            return []
+        while True:
+            # Start and count parameters are required to avoid 424 error
+            response = _make_api_request(f'/api/v2/monitor/firewall/session?start={start}&count={count}&summary=true')
+
+            if response.get('status') != 'success':
+                _logger.warning(f"Fortigate firewall session request returned non-success status: {response}")
+                break
+
+            results = response.get('results', {})
+
+            # Get details from the response
+            details = results.get('details', [])
+            if not details:
+                # No more results
+                break
+
+            all_results.extend(details)
+
+            # Check if we've retrieved all sessions
+            summary = results.get('summary', {})
+            matched_count = summary.get('matched_count', 0)
+
+            _logger.debug(f"Retrieved {len(details)} sessions, total so far: {len(all_results)}, matched_count: {matched_count}")
+
+            # If we've retrieved all matched sessions, stop
+            if len(all_results) >= matched_count:
+                break
+
+            # Move to next page
+            start += count
+
+        _logger.info(f"Retrieved total of {len(all_results)} firewall sessions from Fortigate")
+        return all_results
+
     except Exception as e:
         _logger.error(f"Error fetching firewall sessions: {e}")
         return []
