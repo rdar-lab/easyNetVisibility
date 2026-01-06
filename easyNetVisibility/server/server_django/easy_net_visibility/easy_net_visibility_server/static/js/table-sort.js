@@ -74,8 +74,8 @@
             
             // Check if values are numeric (Open Ports column 6)
             if (columnIndex === 6) {
-                var aNum = parseInt(aVal) || 0;
-                var bNum = parseInt(bVal) || 0;
+                var aNum = parseInt(aVal, 10) || 0;
+                var bNum = parseInt(bVal, 10) || 0;
                 return ascending ? aNum - bNum : bNum - aNum;
             }
             
