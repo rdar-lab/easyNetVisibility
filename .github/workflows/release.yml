@@ -1,0 +1,212 @@
+---
+name: Release
+
+"on":
+  push:
+    tags:
+      - 'v*.*.*'  # Trigger on version tags like v1.0.0, v1.2.3, etc.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g., v1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build-and-push:
+    name: Build and Push Docker Images
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Validate and extract version from tag
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.tag }}"
+            # Validate tag format for workflow_dispatch
+            if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z][a-zA-Z0-9]*)?$ ]]; then
+              echo "Error: Invalid tag format. Expected format: v1.0.0 or v1.0.0-alpha1"
+              exit 1
+            fi
+          else
+            VERSION=${GITHUB_REF#refs/tags/}
+          fi
+          # Remove 'v' prefix if present
+          VERSION_NUMBER=${VERSION#v}
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "version_number=${VERSION_NUMBER}" >> $GITHUB_OUTPUT
+          echo "Building version: ${VERSION}"
+          
+          # Check if this is a pre-release (contains -test, -alpha, -beta, -rc, etc.)
+          if [[ "$VERSION_NUMBER" =~ -[a-zA-Z][a-zA-Z0-9]* ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+            echo "Detected pre-release version: ${VERSION_NUMBER}"
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+            echo "Detected stable release version: ${VERSION_NUMBER}"
+          fi
+
+      - name: Build and push Server Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./easyNetVisibility/server/server_django
+          push: true
+          tags: rdxmaster/easy-net-visibility-server-django:${{ steps.get_version.outputs.version_number }}${{ steps.get_version.outputs.is_prerelease == 'false' && format(',rdxmaster/easy-net-visibility-server-django:latest') || '' }}
+          cache-from: >-
+            type=registry,ref=rdxmaster/easy-net-visibility-server-django:latest
+          cache-to: type=inline
+
+      - name: Build and push Sensor Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./easyNetVisibility/client
+          push: true
+          tags: rdxmaster/easy-net-visibility-sensor:${{ steps.get_version.outputs.version_number }}${{ steps.get_version.outputs.is_prerelease == 'false' && format(',rdxmaster/easy-net-visibility-sensor:latest') || '' }}
+          cache-from: >-
+            type=registry,ref=rdxmaster/easy-net-visibility-sensor:latest
+          cache-to: type=inline
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: build-and-push
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
+          fetch-depth: 0  # Fetch all history for changelog generation
+
+      - name: Extract version from tag
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.tag }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/}
+          fi
+          VERSION_NUMBER=${VERSION#v}
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "version_number=${VERSION_NUMBER}" >> $GITHUB_OUTPUT
+          
+          # Check if this is a pre-release
+          if [[ "$VERSION_NUMBER" =~ -[a-zA-Z][a-zA-Z0-9]* ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get the previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+          cat > RELEASE_NOTES.md << 'EOF'
+          ## What's Changed
+
+          EOF
+
+          if [ -z "$PREV_TAG" ]; then
+            echo "First release - no previous tag found"
+            cat >> RELEASE_NOTES.md << EOF
+          This is the initial release of Easy Net Visibility.
+
+          ### Components
+          - Server (Django-based web dashboard)
+          - Sensor (Network scanning agent)
+
+          ### Docker Images
+          - \`rdxmaster/easy-net-visibility-server-django:${{ steps.get_version.outputs.version_number }}\`
+          - \`rdxmaster/easy-net-visibility-sensor:${{ steps.get_version.outputs.version_number }}\`
+          EOF
+          else
+            echo "Generating changelog from $PREV_TAG to ${{ steps.get_version.outputs.version }}"
+            # Check if the target version exists as a tag or use HEAD
+            if git rev-parse -q --verify "refs/tags/${{ steps.get_version.outputs.version }}" >/dev/null 2>&1; then
+              TARGET_REF=${{ steps.get_version.outputs.version }}
+            else
+              echo "Tag ${{ steps.get_version.outputs.version }} does not exist yet; using HEAD for changelog"
+              TARGET_REF=HEAD
+            fi
+            git log --pretty=format:"- %s (%h)" \
+              ${PREV_TAG}..${TARGET_REF} | head -50 \
+              >> RELEASE_NOTES.md
+            cat >> RELEASE_NOTES.md << EOF
+
+          ### Docker Images
+          - \`rdxmaster/easy-net-visibility-server-django:${{ steps.get_version.outputs.version_number }}\`
+          - \`rdxmaster/easy-net-visibility-sensor:${{ steps.get_version.outputs.version_number }}\`
+          EOF
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.version }}
+          name: Release ${{ steps.get_version.outputs.version }}
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: ${{ steps.get_version.outputs.is_prerelease == 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        run: |
+          echo "## Release Created Successfully! 🎉" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Version: ${{ steps.get_version.outputs.version }}" \
+            >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.get_version.outputs.is_prerelease }}" = "true" ]; then
+            echo "**Type:** Pre-release" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Type:** Stable release" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Docker Images Published:" >> $GITHUB_STEP_SUMMARY
+          echo "- \`rdxmaster/easy-net-visibility-server-django:" \
+            "${{ steps.get_version.outputs.version_number }}\`" \
+            >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.get_version.outputs.is_prerelease }}" = "false" ]; then
+            echo "- \`rdxmaster/easy-net-visibility-server-django:latest\`" \
+              >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "- \`rdxmaster/easy-net-visibility-sensor:" \
+            "${{ steps.get_version.outputs.version_number }}\`" \
+            >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.get_version.outputs.is_prerelease }}" = "false" ]; then
+            echo "- \`rdxmaster/easy-net-visibility-sensor:latest\`" \
+              >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Usage:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "# Pull server image" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull rdxmaster/easy-net-visibility-server-django:" \
+            "${{ steps.get_version.outputs.version_number }}" \
+            >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# Pull sensor image" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull rdxmaster/easy-net-visibility-sensor:" \
+            "${{ steps.get_version.outputs.version_number }}" \
+            >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

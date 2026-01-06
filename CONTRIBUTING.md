@@ -166,23 +166,23 @@ python sensor.py
 **Build and test server**:
 ```bash
 cd easyNetVisibility/server/server_django
-docker build -t easy-net-visibility-server:dev .
+docker build -t rdxmaster/easy-net-visibility-server-django:dev .
 docker run -it --rm -p 8000:8000 \
   -v "$(pwd)/conf:/opt/app/easy_net_visibility/conf:ro" \
   -v "$(pwd)/db:/opt/app/easy_net_visibility/db:rw" \
   -e DJANGO_SUPERUSER_USERNAME=admin \
   -e DJANGO_SUPERUSER_PASSWORD=test \
   -e DJANGO_SUPERUSER_EMAIL=test@test.com \
-  easy-net-visibility-server:dev
+  rdxmaster/easy-net-visibility-server-django:dev
 ```
 
 **Build and test sensor**:
 ```bash
 cd easyNetVisibility/client
-docker build -t easy-net-visibility-sensor:dev .
+docker build -t rdxmaster/easy-net-visibility-sensor:dev .
 docker run -it --rm --net=host \
   -v "$(pwd)/sensor/config:/opt/sensor/config" \
-  easy-net-visibility-sensor:dev
+  rdxmaster/easy-net-visibility-sensor:dev
 ```
 
 ## How to Contribute
@@ -554,6 +554,95 @@ Documentation improvements are always welcome:
 - **PUSHOVER.md**: Pushover integration details
 - **Code comments**: Inline documentation
 - **Docstrings**: API documentation
+
+## Release Process
+
+### For Maintainers
+
+Easy Net Visibility uses automated releases via GitHub Actions. The process is designed to be simple and reliable.
+
+#### Versioning
+
+We follow [Semantic Versioning](https://semver.org/) (MAJOR.MINOR.PATCH):
+
+- **MAJOR**: Breaking changes or major new features
+- **MINOR**: New features, backward compatible
+- **PATCH**: Bug fixes, backward compatible
+
+Examples: `v1.0.0`, `v1.2.3`, `v2.0.0`
+
+#### Creating a Release
+
+1. **Ensure quality standards**:
+   - All tests pass
+   - Code quality checks pass
+   - Documentation is updated
+   - CHANGELOG or release notes prepared
+
+2. **Create and push a version tag**:
+   ```bash
+   # Create an annotated tag with version number
+   git tag -a v1.0.0 -m "Release version 1.0.0 - Description of changes"
+   
+   # Push the tag to GitHub
+   git push origin v1.0.0
+   ```
+
+3. **Automated Release Workflow**:
+   Once the tag is pushed, GitHub Actions will automatically:
+   - Build Docker images for server and sensor
+   - Tag images appropriately based on version type:
+     - **Stable releases** (e.g., `v1.0.0`): Tagged with version AND `latest`
+     - **Pre-releases** (e.g., `v1.0.0-alpha1`, `v2.0.0-rc1`): Tagged with version ONLY (does NOT update `latest`)
+   - Push images to Docker Hub:
+     - `rdxmaster/easy-net-visibility-server-django`
+     - `rdxmaster/easy-net-visibility-sensor`
+   - Create a GitHub Release with auto-generated changelog
+   - Mark pre-releases appropriately to prevent confusion
+
+4. **Verify the release**:
+   - Check [GitHub Actions](https://github.com/rdar-lab/easyNetVisibility/actions) for workflow status
+   - Verify [GitHub Releases](https://github.com/rdar-lab/easyNetVisibility/releases)
+   - Confirm Docker Hub images:
+     - https://hub.docker.com/r/rdxmaster/easy-net-visibility-server-django
+     - https://hub.docker.com/r/rdxmaster/easy-net-visibility-sensor
+
+#### Manual Release Trigger
+
+Releases can also be triggered manually:
+
+1. Navigate to [GitHub Actions](https://github.com/rdar-lab/easyNetVisibility/actions)
+2. Select "Release" workflow
+3. Click "Run workflow"
+4. Enter version tag (e.g., `v1.0.0`)
+5. Click "Run workflow" button
+
+#### Required Secrets
+
+The following GitHub secrets must be configured (one-time setup):
+
+- `DOCKERHUB_USERNAME`: Docker Hub username (rdxmaster)
+- `DOCKERHUB_TOKEN`: Docker Hub access token
+
+**Setting up Docker Hub token** (for administrators):
+1. Log in to [Docker Hub](https://hub.docker.com/)
+2. Go to Account Settings → Security
+3. Click "New Access Token"
+4. Name: "GitHub Actions Release"
+5. Permissions: Read & Write
+6. Copy the token
+7. Add to GitHub: Repository Settings → Secrets and variables → Actions → New repository secret
+
+#### Release Checklist
+
+Before creating a release:
+
+- [ ] All tests pass on main branch
+- [ ] Documentation is up to date
+- [ ] Version number follows semantic versioning
+- [ ] Breaking changes are documented (if any)
+- [ ] CHANGELOG entries prepared (auto-generated, but can be edited)
+- [ ] Docker Hub credentials are configured in GitHub secrets
 
 ## Questions?
 

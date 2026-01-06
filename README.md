@@ -26,6 +26,7 @@
   - [Sensor Configuration](#sensor-configuration)
   - [Fortigate Integration](#fortigate-firewall-integration)
 - [Development and Testing](#development-and-testing)
+- [Release Process](#release-process)
 - [API Documentation](#api-documentation)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
@@ -172,8 +173,11 @@ cat > /opt/easy_net_visibility/conf/settings.json << 'EOF'
 }
 EOF
 
-# Build or pull the Docker image
-docker build -t easy-net-visibility-server easyNetVisibility/server/server_django/
+# Pull the Docker image from Docker Hub
+docker pull rdxmaster/easy-net-visibility-server-django:latest
+
+# Or build locally from source
+# docker build -t rdxmaster/easy-net-visibility-server-django easyNetVisibility/server/server_django/
 
 # Run the server
 docker run -d --restart=always \
@@ -184,7 +188,7 @@ docker run -d --restart=always \
     -e DJANGO_SUPERUSER_PASSWORD=your_secure_password \
     -e DJANGO_SUPERUSER_EMAIL=admin@example.com \
     --name=easy-net-visibility-server \
-    easy-net-visibility-server
+    rdxmaster/easy-net-visibility-server-django:latest
 ```
 
 ### 2. Deploy the Sensor
@@ -205,15 +209,18 @@ validateServerIdentity=False
 interface=eth0
 EOF
 
-# Build or pull the Docker image
-docker build -t easy-net-visibility-sensor easyNetVisibility/client/
+# Pull the Docker image from Docker Hub
+docker pull rdxmaster/easy-net-visibility-sensor:latest
+
+# Or build locally from source
+# docker build -t rdxmaster/easy-net-visibility-sensor easyNetVisibility/client/
 
 # Run the sensor
 docker run -d --restart=always \
     --name=easy-net-visibility-sensor \
     --net=host \
     -v /opt/easynetvisibility:/opt/sensor/config \
-    easy-net-visibility-sensor
+    rdxmaster/easy-net-visibility-sensor:latest
 ```
 
 ### 3. Access the Dashboard
@@ -239,14 +246,24 @@ The server component provides the web dashboard and API for managing network dev
 - **Recommended**: x86-64 Linux (tested on CoreOS on Google Cloud Platform)
 - **Instance Size**: Micro instance is sufficient for small to medium networks
 
-#### Build from Source
+#### Pull from Docker Hub (Recommended)
+
+```bash
+# Pull the latest server image
+docker pull rdxmaster/easy-net-visibility-server-django:latest
+
+# Or pull a specific version
+docker pull rdxmaster/easy-net-visibility-server-django:1.0.0
+```
+
+#### Build from Source (Optional)
 
 ```bash
 # Navigate to server directory
 cd easyNetVisibility/server/server_django
 
 # Build Docker image
-docker build -t easy-net-visibility-server .
+docker build -t rdxmaster/easy-net-visibility-server-django .
 ```
 
 #### Configuration Setup
@@ -300,7 +317,7 @@ docker run -d --restart=always \
     -e DJANGO_SUPERUSER_PASSWORD=your_secure_password \
     -e DJANGO_SUPERUSER_EMAIL=admin@example.com \
     --name=easy-net-visibility-server \
-    easy-net-visibility-server
+    rdxmaster/easy-net-visibility-server-django:latest
 ```
 
 **For testing** (interactive mode):
@@ -313,7 +330,7 @@ docker run -it --rm \
     -e DJANGO_SUPERUSER_PASSWORD=test_password \
     -e DJANGO_SUPERUSER_EMAIL=admin@test.com \
     --name=easy-net-visibility-server \
-    easy-net-visibility-server
+    rdxmaster/easy-net-visibility-server-django:latest
 ```
 
 #### Using External Database
@@ -407,14 +424,24 @@ The sensor component scans the network and reports discovered devices to the ser
 - **ARM**: Raspberry Pi (Raspbian, Yocto Linux)
 - **Other**: Any Linux system with Docker support
 
-#### Build from Source
+#### Pull from Docker Hub (Recommended)
+
+```bash
+# Pull the latest sensor image
+docker pull rdxmaster/easy-net-visibility-sensor:latest
+
+# Or pull a specific version
+docker pull rdxmaster/easy-net-visibility-sensor:1.0.0
+```
+
+#### Build from Source (Optional)
 
 ```bash
 # Navigate to client directory
 cd easyNetVisibility/client
 
 # Build Docker image
-docker build -t easy-net-visibility-sensor .
+docker build -t rdxmaster/easy-net-visibility-sensor .
 ```
 
 #### Configuration Setup
@@ -462,7 +489,7 @@ docker run -d --restart=always \
     --name=easy-net-visibility-sensor \
     --net=host \
     -v /opt/easynetvisibility:/opt/sensor/config \
-    easy-net-visibility-sensor
+    rdxmaster/easy-net-visibility-sensor:latest
 ```
 
 **For testing** (interactive mode with logs):
@@ -471,7 +498,7 @@ docker run -it --rm \
     --name=easy-net-visibility-sensor \
     --net=host \
     -v /opt/easynetvisibility:/opt/sensor/config \
-    easy-net-visibility-sensor
+    rdxmaster/easy-net-visibility-sensor:latest
 ```
 
 **Important Notes**:
@@ -1070,14 +1097,14 @@ import pdb; pdb.set_trace()
 
 ```bash
 cd easyNetVisibility/server/server_django
-docker build -t easy-net-visibility-server:dev .
+docker build -t rdxmaster/easy-net-visibility-server-django:dev .
 ```
 
 #### Build Sensor Image
 
 ```bash
 cd easyNetVisibility/client
-docker build -t easy-net-visibility-sensor:dev .
+docker build -t rdxmaster/easy-net-visibility-sensor:dev .
 ```
 
 #### Test Docker Images Locally
@@ -1090,13 +1117,83 @@ docker run -it --rm -p 8000:8000 \
   -e DJANGO_SUPERUSER_USERNAME=admin \
   -e DJANGO_SUPERUSER_PASSWORD=test \
   -e DJANGO_SUPERUSER_EMAIL=test@test.com \
-  easy-net-visibility-server:dev
+  rdxmaster/easy-net-visibility-server-django:dev
 
 # Run sensor
 docker run -it --rm --net=host \
   -v "$(pwd)/config:/opt/sensor/config" \
-  easy-net-visibility-sensor:dev
+  rdxmaster/easy-net-visibility-sensor:dev
 ```
+
+## Release Process
+
+Easy Net Visibility uses automated releases via GitHub Actions. When a new version tag is pushed, the system automatically builds Docker images and publishes them to Docker Hub.
+
+### Docker Hub Repositories
+
+- **Server**: [`rdxmaster/easy-net-visibility-server-django`](https://hub.docker.com/r/rdxmaster/easy-net-visibility-server-django)
+- **Sensor**: [`rdxmaster/easy-net-visibility-sensor`](https://hub.docker.com/r/rdxmaster/easy-net-visibility-sensor)
+
+### Creating a New Release
+
+**For Maintainers**: To create a new release, follow these steps:
+
+1. **Ensure all changes are committed and tests pass**:
+   ```bash
+   git status
+   # Verify all GitHub Actions workflows are passing
+   ```
+
+2. **Create and push a version tag**:
+   ```bash
+   # Use semantic versioning (MAJOR.MINOR.PATCH)
+   git tag -a v1.0.0 -m "Release version 1.0.0"
+   git push origin v1.0.0
+   ```
+
+3. **Automated workflow will**:
+   - Build Docker images for both server and sensor
+   - Tag images with version number (e.g., `1.0.0`) and `latest`
+   - Push images to Docker Hub
+   - Create a GitHub Release with changelog
+
+4. **Verify the release**:
+   - Check [GitHub Releases](https://github.com/rdar-lab/easyNetVisibility/releases)
+   - Verify images on Docker Hub:
+     - `rdxmaster/easy-net-visibility-server-django:1.0.0`
+     - `rdxmaster/easy-net-visibility-sensor:1.0.0`
+
+### Required GitHub Secrets
+
+The release workflow requires the following secrets to be configured in the GitHub repository:
+
+- `DOCKERHUB_USERNAME`: Docker Hub username
+- `DOCKERHUB_TOKEN`: Docker Hub access token (not password)
+
+**Setting up Docker Hub Token**:
+1. Log in to [Docker Hub](https://hub.docker.com/)
+2. Go to Account Settings → Security → New Access Token
+3. Create a token with read/write permissions
+4. Add the token to GitHub repository secrets
+
+### Manual Release Trigger
+
+If needed, releases can also be triggered manually via GitHub Actions:
+
+1. Go to the [Actions tab](https://github.com/rdar-lab/easyNetVisibility/actions)
+2. Select the "Release" workflow
+3. Click "Run workflow"
+4. Enter the version tag (e.g., `v1.0.0`)
+5. Click "Run workflow" to start the build
+
+### Version Tag Types
+
+The workflow automatically handles different version types:
+
+- **Stable releases** (e.g., `v1.0.0`, `v2.1.3`): Tagged with version AND `latest` on Docker Hub, created as regular GitHub releases
+- **Pre-releases** (e.g., `v0.0.1-test`, `v1.0.0-alpha`, `v2.0.0-rc1`): Tagged with version number only (does NOT update `latest`), created as pre-release on GitHub
+
+This ensures test versions don't affect production users pulling `latest` images.
 
 ## API Documentation
 
