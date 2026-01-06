@@ -55,7 +55,9 @@ def _make_api_request(endpoint):
     if not _fortigate_host:
         raise ValueError("Fortigate not initialized. Call init() first.")
 
-    url = f"{_fortigate_host}{endpoint}"
+    # Add access_token parameter to endpoint for authentication
+    separator = '&' if '?' in endpoint else '?'
+    url = f"{_fortigate_host}{endpoint}{separator}access_token={_fortigate_api_key}"
 
     try:
         # Suppress SSL warnings only for this request if SSL validation is disabled
@@ -66,14 +68,8 @@ def _make_api_request(endpoint):
                 else:
                     warnings.filterwarnings('ignore', message='Unverified HTTPS request')
 
-            # Use API key authentication via Authorization header
-            headers = {
-                'Authorization': f'Bearer {_fortigate_api_key}'
-            }
-
             response = requests.get(
                 url,
-                headers=headers,
                 verify=_validate_ssl,
                 timeout=30
             )

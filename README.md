@@ -752,16 +752,13 @@ When Fortigate integration is enabled, the sensor will:
 **Test API Access**:
 ```bash
 # Test DHCP API
-curl -k -H "Authorization: Bearer YOUR_API_KEY" \
-  "https://192.168.1.1/api/v2/monitor/system/dhcp/select"
+curl -k "https://192.168.1.1/api/v2/monitor/system/dhcp/select?access_token=YOUR_API_KEY"
 
 # Test Firewall Session API (with VDOM)
-curl -k -H "Authorization: Bearer YOUR_API_KEY" \
-  "https://192.168.1.1/api/v2/monitor/firewall/session?vdom=root&ip_version=ipv4&summary=true"
+curl -k "https://192.168.1.1/api/v2/monitor/firewall/session?vdom=root&ip_version=ipv4&summary=true&access_token=YOUR_API_KEY"
 
 # Test Firewall Session API (without VDOM - use if VDOM is not enabled)
-curl -k -H "Authorization: Bearer YOUR_API_KEY" \
-  "https://192.168.1.1/api/v2/monitor/firewall/session?ip_version=ipv4&summary=true"
+curl -k "https://192.168.1.1/api/v2/monitor/firewall/session?ip_version=ipv4&summary=true&access_token=YOUR_API_KEY"
 ```
 
 Expected response: JSON with status 'success' and array of results
@@ -1127,8 +1124,7 @@ docker logs -f easy-net-visibility-sensor
 nmap -sn 192.168.1.0/24
 
 # Test Fortigate API
-curl -k -H "Authorization: Bearer YOUR_API_KEY" \
-  "https://fortigate-ip/api/v2/monitor/user/device"
+curl -k "https://fortigate-ip/api/v2/monitor/user/device?access_token=YOUR_API_KEY"
 ```
 
 4. **Python debugger**:
@@ -1609,8 +1605,7 @@ curl -u username:password http://server:8000/api/csrf
 
 1. Test Fortigate API access:
 ```bash
-curl -k -H "Authorization: Bearer YOUR_API_KEY" \
-  "https://fortigate-ip/api/v2/monitor/user/device"
+curl -k "https://fortigate-ip/api/v2/monitor/user/device?access_token=YOUR_API_KEY"
 ```
 
 2. Check sensor logs for Fortigate errors:
