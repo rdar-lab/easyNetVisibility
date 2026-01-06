@@ -263,6 +263,49 @@ class TestDeviceView(TestCase):
         # The response should contain the capitalized warning message
         self.assertContains(response, "Device matching query does not exist")
 
+    def test_rename_device_without_csrf_token(self):
+        """Test that rename_device works without CSRF token when CSRF_PROTECTION_ENABLED is False"""
+        from django.test import Client
+        # Create a new client without CSRF token
+        client = Client(enforce_csrf_checks=True)
+        client.login(username='testuser', password='testpass')
+
+        # This should work because CSRF_PROTECTION_ENABLED is False in settings
+        response = client.post(reverse('rename_device'), {
+            'device_id': self.device.id,
+            'nickname': 'NewNameWithoutCSRF'
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.device.refresh_from_db()
+        self.assertEqual(self.device.nickname, 'NewNameWithoutCSRF')
+
+    def test_delete_device_without_csrf_token(self):
+        """Test that delete_device works without CSRF token when CSRF_PROTECTION_ENABLED is False"""
+        from django.test import Client
+        # Create a test device for deletion
+        device_to_delete = Device.objects.create(
+            nickname='DeleteWithoutCSRF',
+            hostname='deletehost',
+            ip='10.0.0.99',
+            mac='AABBCCDDEE99',
+            vendor='Vendor',
+            first_seen=timezone.now(),
+            last_seen=timezone.now()
+        )
+
+        # Create a new client without CSRF token
+        client = Client(enforce_csrf_checks=True)
+        client.login(username='testuser', password='testpass')
+
+        # This should work because CSRF_PROTECTION_ENABLED is False in settings
+        response = client.post(reverse('delete_device'), {
+            'device_id': device_to_delete.id
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Device.objects.filter(id=device_to_delete.id).exists())
+
 
 class BaseDeviceApiTest(ABC, TestCase):
     def api_post(self, url_name, data, extra=None):
