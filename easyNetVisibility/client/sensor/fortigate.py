@@ -84,21 +84,51 @@ def get_firewall_sessions():
     Get active firewall sessions from Fortigate.
 
     This queries the firewall session table to identify devices with active traffic.
-    Only live/active devices are returned.
+    Only live/active devices are returned. Handles pagination to retrieve all sessions.
 
     Returns:
         list: List of active session entries with IP and MAC information
     """
     try:
         _logger.info("Fetching firewall sessions from Fortigate")
-        # Query firewall sessions with summary to get unique devices
-        response = _make_api_request('/api/v2/monitor/firewall/session?vdom=root&ip_version=ipv4&summary=true')
+        all_results = []
+        start = 0
+        count = 100  # Fetch 100 sessions at a time
 
-        if response.get('status') == 'success':
-            return response.get('results', [])
-        else:
-            _logger.warning(f"Fortigate firewall session request returned non-success status: {response}")
-            return []
+        while True:
+            # Start and count parameters are required to avoid 424 error
+            response = _make_api_request(f'/api/v2/monitor/firewall/session?start={start}&count={count}&summary=true')
+
+            if response.get('status') != 'success':
+                _logger.warning(f"Fortigate firewall session request returned non-success status: {response}")
+                break
+
+            results = response.get('results', {})
+
+            # Get details from the response
+            details = results.get('details', [])
+            if not details:
+                # No more results
+                break
+
+            all_results.extend(details)
+
+            # Check if we've retrieved all sessions
+            summary = results.get('summary', {})
+            matched_count = summary.get('matched_count', 0)
+
+            _logger.debug(f"Retrieved {len(details)} sessions, total so far: {len(all_results)}, matched_count: {matched_count}")
+
+            # If we've retrieved all matched sessions, stop
+            if len(all_results) >= matched_count:
+                break
+
+            # Move to next page
+            start += count
+
+        _logger.info(f"Retrieved total of {len(all_results)} firewall sessions from Fortigate")
+        return all_results
+
     except Exception as e:
         _logger.error(f"Error fetching firewall sessions: {e}")
         return []

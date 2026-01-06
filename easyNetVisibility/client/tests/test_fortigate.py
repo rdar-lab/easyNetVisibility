@@ -2,6 +2,7 @@ import os
 import sys
 import unittest
 from unittest.mock import patch, MagicMock
+import requests
 
 # Add the sensor directory to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'sensor'))
@@ -17,6 +18,7 @@ class TestFortigateInit(unittest.TestCase):
         self.assertEqual(fortigate._fortigate_host, 'https://192.168.1.1')
         self.assertEqual(fortigate._fortigate_api_key, 'test_api_key_12345')
         self.assertEqual(fortigate._validate_ssl, False)
+
 
 
 class TestFortigateAPIRequest(unittest.TestCase):
@@ -92,13 +94,16 @@ class TestFortigateFirewallSessions(unittest.TestCase):
     
     @patch('fortigate._make_api_request')
     def test_get_firewall_sessions_success(self, mock_request):
-        """Test successful firewall sessions retrieval"""
+        """Test successful firewall sessions retrieval with pagination"""
         mock_request.return_value = {
             'status': 'success',
-            'results': [
-                {'src': '192.168.1.10', 'srcmac': 'AA:BB:CC:DD:EE:FF', 'dst': '8.8.8.8'},
-                {'src': '192.168.1.20', 'srcmac': '00:11:22:33:44:55', 'dst': '1.1.1.1'}
-            ]
+            'results': {
+                'summary': {'matched_count': 2},
+                'details': [
+                    {'src': '192.168.1.10', 'srcmac': 'AA:BB:CC:DD:EE:FF', 'dst': '8.8.8.8'},
+                    {'src': '192.168.1.20', 'srcmac': '00:11:22:33:44:55', 'dst': '1.1.1.1'}
+                ]
+            }
         }
         
         result = fortigate.get_firewall_sessions()
@@ -106,6 +111,33 @@ class TestFortigateFirewallSessions(unittest.TestCase):
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0]['src'], '192.168.1.10')
         self.assertEqual(result[0]['srcmac'], 'AA:BB:CC:DD:EE:FF')
+    
+    @patch('fortigate._make_api_request')
+    def test_get_firewall_sessions_pagination(self, mock_request):
+        """Test firewall sessions retrieval with multiple pages"""
+        # First page
+        first_page = {
+            'status': 'success',
+            'results': {
+                'summary': {'matched_count': 150},
+                'details': [{'src': f'192.168.1.{i}', 'srcmac': 'AA:BB:CC:DD:EE:FF'} for i in range(100)]
+            }
+        }
+        # Second page
+        second_page = {
+            'status': 'success',
+            'results': {
+                'summary': {'matched_count': 150},
+                'details': [{'src': f'192.168.2.{i}', 'srcmac': 'AA:BB:CC:DD:EE:FF'} for i in range(50)]
+            }
+        }
+        
+        mock_request.side_effect = [first_page, second_page]
+        
+        result = fortigate.get_firewall_sessions()
+        
+        # Should have all 150 sessions
+        self.assertEqual(len(result), 150)
     
     @patch('fortigate._make_api_request')
     def test_get_firewall_sessions_failure(self, mock_request):
