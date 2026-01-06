@@ -41,39 +41,67 @@
         if (!dateStr) return 0;
         var match = dateStr.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
         if (!match) return 0;
-        var month = parseInt(match[1]) - 1;
-        var day = parseInt(match[2]);
-        var year = parseInt(match[3]);
-        var hour = parseInt(match[4]);
-        var minute = parseInt(match[5]);
-        var second = parseInt(match[6]);
-        return new Date(year, month, day, hour, minute, second).getTime();
+        
+        var monthRaw = parseInt(match[1], 10);
+        var day = parseInt(match[2], 10);
+        var year = parseInt(match[3], 10);
+        var hour = parseInt(match[4], 10);
+        var minute = parseInt(match[5], 10);
+        var second = parseInt(match[6], 10);
+
+        // Basic range validation
+        if (isNaN(monthRaw) || isNaN(day) || isNaN(year) ||
+            isNaN(hour) || isNaN(minute) || isNaN(second)) {
+            return 0;
+        }
+
+        if (monthRaw < 1 || monthRaw > 12) return 0;
+        if (day < 1 || day > 31) return 0;
+        if (hour < 0 || hour > 23) return 0;
+        if (minute < 0 || minute > 59) return 0;
+        if (second < 0 || second > 59) return 0;
+
+        var monthIndex = monthRaw - 1;
+        var d = new Date(year, monthIndex, day, hour, minute, second);
+
+        // Ensure Date did not normalize an invalid value
+        if (d.getFullYear() !== year ||
+            d.getMonth() !== monthIndex ||
+            d.getDate() !== day ||
+            d.getHours() !== hour ||
+            d.getMinutes() !== minute ||
+            d.getSeconds() !== second) {
+            return 0;
+        }
+
+        return d.getTime();
     }
 
     function sortTable(table, columnIndex, ascending) {
         var tbody = $(table).find('tbody');
         var rows = tbody.find('tr').get();
         
+        // Get the sort type from the header
+        var sortType = $(table).find('thead th').eq(columnIndex).attr('data-sort-type') || 'text';
+        
         rows.sort(function(a, b) {
             var aVal = $(a).find('td').eq(columnIndex).text().trim();
             var bVal = $(b).find('td').eq(columnIndex).text().trim();
             
-            // Check if column is IP (column 1)
-            if (columnIndex === 1) {
+            // Sort based on the column's data-sort-type attribute
+            if (sortType === 'ip') {
                 var aNum = ipToNumber(aVal);
                 var bNum = ipToNumber(bVal);
                 return ascending ? aNum - bNum : bNum - aNum;
             }
             
-            // Check if column is date (columns 4, 5)
-            if (columnIndex === 4 || columnIndex === 5) {
+            if (sortType === 'date') {
                 var aTime = parseDateTime(aVal);
                 var bTime = parseDateTime(bVal);
                 return ascending ? aTime - bTime : bTime - aTime;
             }
             
-            // Check if values are numeric (Open Ports column 6)
-            if (columnIndex === 6) {
+            if (sortType === 'number') {
                 var aNum = parseInt(aVal, 10) || 0;
                 var bNum = parseInt(bVal, 10) || 0;
                 return ascending ? aNum - bNum : bNum - aNum;

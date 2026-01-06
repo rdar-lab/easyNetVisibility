@@ -31,11 +31,15 @@ def home(request):
 
     # Sort devices by IP address numerically
     def ip_sort_key(device):
+        ip = getattr(device, "ip", None)
+        # Handle None or empty/whitespace-only IPs by sorting them last
+        if not ip or str(ip).strip() == "":
+            return ipaddress.ip_address("255.255.255.255")
         try:
-            return ipaddress.ip_address(device.ip)
-        except (ValueError, ipaddress.AddressValueError):
+            return ipaddress.ip_address(ip)
+        except (ValueError, TypeError, ipaddress.AddressValueError):
             # Put invalid IPs at the end
-            return ipaddress.ip_address('255.255.255.255')
+            return ipaddress.ip_address("255.255.255.255")
 
     visible_devices.sort(key=ip_sort_key)
 
