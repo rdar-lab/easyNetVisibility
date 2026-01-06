@@ -755,7 +755,7 @@ curl -k -H "Authorization: Bearer YOUR_API_KEY" \
 
 # Test Firewall Session API
 curl -k -H "Authorization: Bearer YOUR_API_KEY" \
-  "https://192.168.1.1/api/v2/monitor/firewall/session?vdom=root&ip_version=ipv4&summary=True"
+  "https://192.168.1.1/api/v2/monitor/firewall/session?vdom=root&ip_version=ipv4&start=0&count=1000&summary=true"
 ```
 
 Expected response: JSON with status 'success' and array of results

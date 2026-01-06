@@ -94,8 +94,8 @@ def get_firewall_sessions():
     """
     try:
         _logger.info("Fetching firewall sessions from Fortigate")
-        # VDOM is mandatory, summary=True (capital T) is required by FortiGate API
-        response = _make_api_request(f'/api/v2/monitor/firewall/session?vdom={_vdom}&ip_version=ipv4&summary=True')
+        # VDOM is mandatory, start and count parameters are required to avoid 424 error
+        response = _make_api_request(f'/api/v2/monitor/firewall/session?vdom={_vdom}&ip_version=ipv4&start=0&count=1000&summary=true')
 
         if response.get('status') == 'success':
             return response.get('results', [])
