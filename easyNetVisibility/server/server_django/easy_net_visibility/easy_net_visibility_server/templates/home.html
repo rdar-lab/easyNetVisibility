@@ -24,38 +24,38 @@
             Subnet: {{ subnet }}
         </h3>
         <div class="container">
-        <table style="width: 100%; table-layout: fixed;">
+        <table style="width: 100%; min-width: 800px; table-layout: fixed;">
             <thead>
             <tr style="border-bottom: 2px solid #000;">
-                <th style="width: 12.5%;" nowrap><b>Name</b></th>
-                <th style="width: 12.5%;" nowrap><b>IP</b></th>
-                <th style="width: 12.5%;" nowrap><b>MAC</b></th>
-                <th style="width: 12.5%;" nowrap><b>Vendor</b></th>
-                <th style="width: 12.5%;" nowrap><b>First Seen</b></th>
-                <th style="width: 12.5%;" nowrap><b>Last Seen</b></th>
-                <th style="width: 12.5%;" nowrap><b>Open Ports</b></th>
-                <th style="width: 12.5%;" nowrap></th>
+                <th nowrap><b>Name</b></th>
+                <th nowrap><b>IP</b></th>
+                <th nowrap><b>MAC</b></th>
+                <th nowrap><b>Vendor</b></th>
+                <th nowrap><b>First Seen</b></th>
+                <th nowrap><b>Last Seen</b></th>
+                <th nowrap><b>Open Ports</b></th>
+                <th nowrap></th>
             </tr>
             </thead>
             <tbody>
             {% for device in devices %}
 
             <tr style="border-bottom: 1px solid #ccc;">
-                <td style="width: 12.5%;" nowrap>{{device.name|safe}}&nbsp;&nbsp;<span data-toggle="modal"
+                <td nowrap>{{device.name|safe}}&nbsp;&nbsp;<span data-toggle="modal"
                                                                                          data-target="#renameDevice{{forloop.parentloop.counter}}{{forloop.counter}}"
                                                                                          style="cursor: pointer;"><span
                         class="glyphicon glyphicon-edit"></span></span></td>
-                <td style="width: 12.5%;" nowrap>{{device.ip|safe}}</td>
-                <td style="width: 12.5%;" nowrap>{{device.mac|safe}}</td>
-                <td style="width: 12.5%;" nowrap>{{device.vendor|safe}}</td>
-                <td style="width: 12.5%;" class="w3-{% if device.first_seen_today %}red{% else %}white{% endif %}" nowrap>
+                <td nowrap>{{device.ip|safe}}</td>
+                <td nowrap>{{device.mac|safe}}</td>
+                <td nowrap>{{device.vendor|safe}}</td>
+                <td class="w3-{% if device.first_seen_today %}red{% else %}white{% endif %}" nowrap>
                     {{device.first_seen|safe}}
                 </td>
-                <td style="width: 12.5%;" class="w3-{% if device.online %}white{% else %}red{% endif %}" nowrap>
+                <td class="w3-{% if device.online %}white{% else %}red{% endif %}" nowrap>
                     {{device.last_seen|safe}}
                 </td>
-                <td style="width: 12.5%;" nowrap>{{device.port_set.all|length}}</td>
-                <td style="width: 12.5%;" nowrap>
+                <td nowrap>{{device.port_set.all|length}}</td>
+                <td nowrap>
                     <button class="w3-btn-block w3-dark-grey" onclick="location.href='/device/{{device.id}}'">More
                         Info...
                     </button>
