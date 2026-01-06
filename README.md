@@ -658,7 +658,7 @@ The sensor can optionally integrate with Fortigate firewalls to discover live/ac
 4. Configure the API user:
    - Set a descriptive name (e.g., `easy-net-visibility`)
    - Select **Administrator profile**: Read-only profile or custom with these permissions:
-     - System: Configuration (Read)
+     - System: Monitor (Read)
      - Network: Monitor (Read)
      - Firewall: Monitor (Read)
 5. Click **OK**

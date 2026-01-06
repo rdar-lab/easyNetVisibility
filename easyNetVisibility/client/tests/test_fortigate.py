@@ -307,6 +307,35 @@ class TestFortigateDiscoverDevices(unittest.TestCase):
         # Should use hostname from DHCP (first source)
         self.assertEqual(result[0]['hostname'], 'hostname-from-dhcp')
 
+    @patch('fortigate.get_firewall_sessions')
+    @patch('fortigate.get_dhcp_leases')
+    def test_discover_devices_with_destination_macs(self, mock_dhcp, mock_sessions):
+        """Test device discovery includes destination devices with MAC addresses (internal-to-internal traffic)"""
+        mock_dhcp.return_value = []
+        # Simulate internal-to-internal traffic where destination MAC is available
+        mock_sessions.return_value = [
+            {
+                'src': '192.168.1.10',
+                'srcmac': 'AA:BB:CC:DD:EE:FF',
+                'dst': '192.168.1.20',
+                'dstmac': '00:11:22:33:44:55'  # Destination MAC available for internal device
+            }
+        ]
+
+        result = fortigate.discover_devices()
+
+        # Should detect both source and destination devices
+        self.assertEqual(len(result), 2)
+        macs = [d['mac'] for d in result]
+        self.assertIn('AABBCCDDEEFF', macs)
+        self.assertIn('001122334455', macs)
+
+        # Both should have their IPs as hostnames (no DHCP data)
+        ips = [d['ip'] for d in result]
+        self.assertIn('192.168.1.10', ips)
+        self.assertIn('192.168.1.20', ips)
+
+
 
 if __name__ == '__main__':
     unittest.main()

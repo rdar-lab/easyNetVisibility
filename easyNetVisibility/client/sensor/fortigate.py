@@ -184,6 +184,9 @@ def discover_devices():
             src_mac = session.get('srcmac', '') or session.get('src_mac', '')
 
             # Also check destination for internal devices
+            # Note: Destination MAC addresses are typically only available for internal-to-internal
+            # traffic where the firewall has ARP knowledge of both endpoints. For external
+            # destinations (internet), only the destination IP is available.
             dst_ip = session.get('dst', '') or session.get('dstaddr', '') or session.get('destination', '')
             dst_mac = session.get('dstmac', '') or session.get('dst_mac', '')
 
@@ -215,17 +218,20 @@ def discover_devices():
 
     # Enrich firewall session devices with DHCP hostname information
     # This combines the best of both: live traffic detection + hostname resolution
+    # Create a lookup map for efficient hostname enrichment
+    dhcp_hostname_map = {}
+    for lease in dhcp_leases:
+        lease_mac = lease.get('mac', '') or lease.get('mac-address', '')
+        if lease_mac:
+            lease_mac_normalized = network_utils.convert_mac(lease_mac)
+            hostname = lease.get('hostname', '') or lease.get('host-name', '')
+            if hostname:
+                dhcp_hostname_map[lease_mac_normalized] = hostname
+
+    # Apply hostname enrichment using the lookup map
     for mac, device in devices.items():
-        if device['hostname'] == device['ip']:  # No hostname yet, try to find one
-            for lease in dhcp_leases:
-                lease_mac = lease.get('mac', '') or lease.get('mac-address', '')
-                if lease_mac:
-                    lease_mac_normalized = network_utils.convert_mac(lease_mac)
-                    if lease_mac_normalized == mac:
-                        hostname = lease.get('hostname', '') or lease.get('host-name', '')
-                        if hostname:
-                            devices[mac]['hostname'] = hostname
-                        break
+        if device['hostname'] == device['ip'] and mac in dhcp_hostname_map:
+            devices[mac]['hostname'] = dhcp_hostname_map[mac]
 
     result_devices = list(devices.values())
     _logger.info(f"Fortigate discovered {len(result_devices)} live devices")
