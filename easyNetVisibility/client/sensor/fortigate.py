@@ -79,61 +79,46 @@ def _make_api_request(endpoint):
         raise
 
 
-def get_user_devices():
+def get_firewall_sessions():
     """
-    Get user devices from Fortigate's built-in Assets view.
+    Get active firewall sessions from Fortigate.
 
-    This uses the FortiGate user device endpoint which provides comprehensive
-    device information including hostname, IP, MAC, OS, and more.
+    This queries the firewall session table to identify devices with active traffic.
+    Only live/active devices are returned.
 
     Returns:
-        list: List of device entries from FortiGate's device database
+        list: List of active session entries with IP and MAC information
     """
     try:
-        _logger.info("Fetching user devices from Fortigate")
-        response = _make_api_request('/api/v2/monitor/user/device')
+        _logger.info("Fetching firewall sessions from Fortigate")
+        # Query firewall sessions with summary to get unique devices
+        response = _make_api_request('/api/v2/monitor/firewall/session?vdom=root&ip_version=ipv4&summary=true')
 
         if response.get('status') == 'success':
             return response.get('results', [])
         else:
-            _logger.warning(f"Fortigate user device request returned non-success status: {response}")
+            _logger.warning(f"Fortigate firewall session request returned non-success status: {response}")
             return []
     except Exception as e:
-        _logger.error(f"Error fetching user devices: {e}")
+        _logger.error(f"Error fetching firewall sessions: {e}")
         return []
 
 
-def get_arp_table():
-    """
-    Get ARP table from Fortigate (fallback method).
 
-    Returns:
-        list: List of ARP entries with IP and MAC addresses
-    """
-    try:
-        _logger.info("Fetching ARP table from Fortigate")
-        response = _make_api_request('/api/v2/monitor/system/arp')
-
-        if response.get('status') == 'success':
-            return response.get('results', [])
-        else:
-            _logger.warning(f"Fortigate ARP request returned non-success status: {response}")
-            return []
-    except Exception as e:
-        _logger.error(f"Error fetching ARP table: {e}")
-        return []
 
 
 def get_dhcp_leases():
     """
     Get DHCP leases from Fortigate.
 
+    This uses the correct DHCP select endpoint to retrieve active DHCP leases.
+
     Returns:
-        list: List of DHCP lease entries
+        list: List of DHCP lease entries with IP, MAC, and hostname information
     """
     try:
         _logger.info("Fetching DHCP leases from Fortigate")
-        response = _make_api_request('/api/v2/monitor/system/dhcp')
+        response = _make_api_request('/api/v2/monitor/system/dhcp/select')
 
         if response.get('status') == 'success':
             return response.get('results', [])
@@ -147,10 +132,13 @@ def get_dhcp_leases():
 
 def discover_devices():
     """
-    Discover devices from Fortigate firewall.
+    Discover live devices from Fortigate firewall.
 
-    Uses FortiGate's built-in user device database (Assets view) which provides
-    comprehensive device information. Falls back to ARP table if device API fails.
+    Uses two primary sources to identify active/live devices:
+    1. DHCP leases - devices with active DHCP assignments
+    2. Firewall sessions - devices with active traffic through the firewall
+
+    This approach ensures only live devices are detected.
 
     Returns:
         list: List of device dictionaries with keys: hostname, ip, mac, vendor
@@ -159,19 +147,16 @@ def discover_devices():
 
     devices = {}
 
-    # Try to get devices from FortiGate's user device database (Assets view)
-    # This is more efficient and provides richer information
-    user_devices = get_user_devices()
-
-    if user_devices:
-        _logger.info(f"Retrieved {len(user_devices)} devices from FortiGate Assets")
-        for device in user_devices:
-            # FortiGate device API provides multiple fields
-            # Common fields: mac_addr, ipv4_address, hostname, host_name, os_name, etc.
-            mac = device.get('mac_addr', '') or device.get('mac', '')
-            ip = device.get('ipv4_address', '') or device.get('ip', '')
-            hostname = device.get('hostname', '') or device.get('host_name', '')
-            os_name = device.get('os_name', '')
+    # Method 1: Get devices from DHCP leases
+    # DHCP leases represent devices that have recently requested an IP address
+    dhcp_leases = get_dhcp_leases()
+    if dhcp_leases:
+        _logger.info(f"Retrieved {len(dhcp_leases)} DHCP leases from Fortigate")
+        for lease in dhcp_leases:
+            # DHCP lease fields may include: ip, mac, hostname, interface, etc.
+            ip = lease.get('ip', '') or lease.get('ip-address', '')
+            mac = lease.get('mac', '') or lease.get('mac-address', '')
+            hostname = lease.get('hostname', '') or lease.get('host-name', '')
 
             if ip and mac:
                 # Normalize MAC address using existing utility
@@ -180,59 +165,72 @@ def discover_devices():
                 # Use hostname if available, otherwise use IP
                 display_name = hostname if hostname else ip
 
-                # Use OS name as vendor if available
-                vendor = os_name if os_name else 'Unknown'
-
                 devices[mac_normalized] = {
                     'hostname': display_name,
                     'ip': ip,
                     'mac': mac_normalized,
-                    'vendor': vendor
+                    'vendor': 'Unknown'
                 }
     else:
-        # Fallback to ARP table if user device API doesn't return results
-        _logger.info("User device API returned no results, falling back to ARP table")
-        arp_entries = get_arp_table()
-        for entry in arp_entries:
-            ip = entry.get('ip', '')
-            mac = entry.get('mac', '')
+        _logger.info("No DHCP leases returned from Fortigate")
 
-            if ip and mac:
-                # Normalize MAC address using existing utility
-                mac_normalized = network_utils.convert_mac(mac)
+    # Method 2: Get devices from active firewall sessions
+    # Firewall sessions represent devices with active network traffic
+    firewall_sessions = get_firewall_sessions()
+    if firewall_sessions:
+        _logger.info(f"Retrieved {len(firewall_sessions)} firewall sessions from Fortigate")
+        for session in firewall_sessions:
+            # Session data structure varies; typically includes source/destination IPs
+            # May include: src, dst, srcaddr, dstaddr, srcmac, etc.
+            # We're interested in source devices (clients on the network)
+            src_ip = session.get('src', '') or session.get('srcaddr', '') or session.get('source', '')
+            src_mac = session.get('srcmac', '') or session.get('src_mac', '')
+            
+            # Also check destination for internal devices
+            dst_ip = session.get('dst', '') or session.get('dstaddr', '') or session.get('destination', '')
+            dst_mac = session.get('dstmac', '') or session.get('dst_mac', '')
+
+            # Process source device
+            if src_ip and src_mac:
+                mac_normalized = network_utils.convert_mac(src_mac)
 
                 if mac_normalized not in devices:
                     devices[mac_normalized] = {
-                        'hostname': ip,  # Default to IP if no hostname
-                        'ip': ip,
+                        'hostname': src_ip,  # Default to IP if no hostname
+                        'ip': src_ip,
                         'mac': mac_normalized,
                         'vendor': 'Unknown'
                     }
 
-        # Try to enrich with DHCP lease information for hostnames
-        dhcp_leases = get_dhcp_leases()
-        for lease in dhcp_leases:
-            ip = lease.get('ip', '')
-            mac = lease.get('mac', '')
-            hostname = lease.get('hostname', '')
+            # Process destination device (for internal traffic)
+            if dst_ip and dst_mac:
+                mac_normalized = network_utils.convert_mac(dst_mac)
 
-            if ip and mac:
-                mac_normalized = network_utils.convert_mac(mac)
-
-                if mac_normalized in devices:
-                    # Update existing entry with hostname if available
-                    if hostname:
-                        devices[mac_normalized]['hostname'] = hostname
-                else:
-                    # Add new entry from DHCP
+                if mac_normalized not in devices:
                     devices[mac_normalized] = {
-                        'hostname': hostname if hostname else ip,
-                        'ip': ip,
+                        'hostname': dst_ip,  # Default to IP if no hostname
+                        'ip': dst_ip,
                         'mac': mac_normalized,
                         'vendor': 'Unknown'
                     }
+    else:
+        _logger.info("No firewall sessions returned from Fortigate")
+
+    # Enrich firewall session devices with DHCP hostname information
+    # This combines the best of both: live traffic detection + hostname resolution
+    for mac, device in devices.items():
+        if device['hostname'] == device['ip']:  # No hostname yet, try to find one
+            for lease in dhcp_leases:
+                lease_mac = lease.get('mac', '') or lease.get('mac-address', '')
+                if lease_mac:
+                    lease_mac_normalized = network_utils.convert_mac(lease_mac)
+                    if lease_mac_normalized == mac:
+                        hostname = lease.get('hostname', '') or lease.get('host-name', '')
+                        if hostname:
+                            devices[mac]['hostname'] = hostname
+                        break
 
     result_devices = list(devices.values())
-    _logger.info(f"Fortigate discovered {len(result_devices)} devices")
+    _logger.info(f"Fortigate discovered {len(result_devices)} live devices")
 
     return result_devices
