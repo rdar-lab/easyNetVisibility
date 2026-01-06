@@ -104,9 +104,6 @@ def get_firewall_sessions():
         return []
 
 
-
-
-
 def get_dhcp_leases():
     """
     Get DHCP leases from Fortigate.
@@ -185,7 +182,7 @@ def discover_devices():
             # We're interested in source devices (clients on the network)
             src_ip = session.get('src', '') or session.get('srcaddr', '') or session.get('source', '')
             src_mac = session.get('srcmac', '') or session.get('src_mac', '')
-            
+
             # Also check destination for internal devices
             dst_ip = session.get('dst', '') or session.get('dstaddr', '') or session.get('destination', '')
             dst_mac = session.get('dstmac', '') or session.get('dst_mac', '')
