@@ -11,7 +11,7 @@
         var parts = ip.split('.');
         if (parts.length !== 4) return 0;
         return parts.reduce(function(acc, octet, i) {
-            return acc + (parseInt(octet) || 0) * Math.pow(256, 3 - i);
+            return acc + (parseInt(octet, 10) || 0) * Math.pow(256, 3 - i);
         }, 0);
     }
 
@@ -26,7 +26,7 @@
             var bPart = bParts[i];
             
             if (/^\d+$/.test(aPart) && /^\d+$/.test(bPart)) {
-                var diff = parseInt(aPart) - parseInt(bPart);
+                var diff = parseInt(aPart, 10) - parseInt(bPart, 10);
                 if (diff !== 0) return diff;
             } else {
                 if (aPart < bPart) return -1;
