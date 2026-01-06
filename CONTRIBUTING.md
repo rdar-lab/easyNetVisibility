@@ -591,12 +591,14 @@ Examples: `v1.0.0`, `v1.2.3`, `v2.0.0`
 3. **Automated Release Workflow**:
    Once the tag is pushed, GitHub Actions will automatically:
    - Build Docker images for server and sensor
-   - Tag images with the version (e.g., `1.0.0`) and `latest`
+   - Tag images appropriately based on version type:
+     - **Stable releases** (e.g., `v1.0.0`): Tagged with version AND `latest`
+     - **Pre-releases** (e.g., `v1.0.0-alpha1`, `v2.0.0-rc1`): Tagged with version ONLY (does NOT update `latest`)
    - Push images to Docker Hub:
      - `rdxmaster/easy-net-visibility-server-django`
      - `rdxmaster/easy-net-visibility-sensor`
    - Create a GitHub Release with auto-generated changelog
-   - Attach version information to the release
+   - Mark pre-releases appropriately to prevent confusion
 
 4. **Verify the release**:
    - Check [GitHub Actions](https://github.com/rdar-lab/easyNetVisibility/actions) for workflow status

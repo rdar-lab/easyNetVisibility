@@ -1194,7 +1194,6 @@ The workflow automatically handles different version types:
 - **Pre-releases** (e.g., `v0.0.1-test`, `v1.0.0-alpha`, `v2.0.0-rc1`): Tagged with version number only (does NOT update `latest`), created as pre-release on GitHub
 
 This ensures test versions don't affect production users pulling `latest` images.
-```
 
 ## API Documentation
 

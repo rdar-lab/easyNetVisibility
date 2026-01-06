@@ -143,8 +143,7 @@ Once testing is complete and successful:
    Initial production release with:
    - Server (Django-based web dashboard)
    - Sensor (Network scanning agent)
-   - Automated release workflow
-   "
+   - Automated release workflow"
 
    # Push the tag
    git push origin v1.0.0
