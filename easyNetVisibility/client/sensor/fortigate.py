@@ -55,9 +55,7 @@ def _make_api_request(endpoint):
     if not _fortigate_host:
         raise ValueError("Fortigate not initialized. Call init() first.")
 
-    # Add access_token parameter to endpoint for authentication
-    separator = '&' if '?' in endpoint else '?'
-    url = f"{_fortigate_host}{endpoint}{separator}access_token={_fortigate_api_key}"
+    url = f"{_fortigate_host}{endpoint}"
 
     try:
         # Suppress SSL warnings only for this request if SSL validation is disabled
@@ -68,8 +66,14 @@ def _make_api_request(endpoint):
                 else:
                     warnings.filterwarnings('ignore', message='Unverified HTTPS request')
 
+            # Use API key authentication via Authorization header
+            headers = {
+                'Authorization': f'Bearer {_fortigate_api_key}'
+            }
+
             response = requests.get(
                 url,
+                headers=headers,
                 verify=_validate_ssl,
                 timeout=30
             )
@@ -95,10 +99,11 @@ def get_firewall_sessions():
         _logger.info("Fetching firewall sessions from Fortigate")
 
         # Build endpoint with optional VDOM parameter
+        # Note: summary=True (capital T) is required by FortiGate API
         if _vdom:
-            endpoint = f'/api/v2/monitor/firewall/session?vdom={_vdom}&ip_version=ipv4&summary=true'
+            endpoint = f'/api/v2/monitor/firewall/session?vdom={_vdom}&ip_version=ipv4&summary=True'
         else:
-            endpoint = '/api/v2/monitor/firewall/session?ip_version=ipv4&summary=true'
+            endpoint = '/api/v2/monitor/firewall/session?ip_version=ipv4&summary=True'
 
         try:
             response = _make_api_request(endpoint)
@@ -117,7 +122,7 @@ def get_firewall_sessions():
                                     "Retrying without VDOM parameter...")
                     # Retry without VDOM parameter
                     try:
-                        endpoint_no_vdom = '/api/v2/monitor/firewall/session?ip_version=ipv4&summary=true'
+                        endpoint_no_vdom = '/api/v2/monitor/firewall/session?ip_version=ipv4&summary=True'
                         response = _make_api_request(endpoint_no_vdom)
 
                         if response.get('status') == 'success':
