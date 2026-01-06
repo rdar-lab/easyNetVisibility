@@ -624,26 +624,29 @@ Look for the interface connected to your target network (typically `eth0`, `ens3
 
 ### Fortigate Firewall Integration
 
-The sensor can optionally integrate with Fortigate firewalls to enhance device discovery using FortiGate's built-in **Assets** view (user device database). This provides comprehensive device information including hostnames, IP addresses, MAC addresses, and OS detection.
+The sensor can optionally integrate with Fortigate firewalls to discover live/active devices through two complementary methods: **DHCP leases** and **active firewall sessions**. This approach ensures that only devices with recent network activity are detected.
 
 #### Features
 
-- **Primary Method**: Query FortiGate Assets API (`/api/v2/monitor/user/device`)
-  - Comprehensive device information: hostname, IP, MAC, OS name
-  - More efficient than polling multiple endpoints
-  - Better device identification with OS detection
+- **DHCP-based Discovery**: Query active DHCP leases (`/api/v2/monitor/system/dhcp/select`)
+  - Devices that have recently requested IP addresses
+  - Includes hostname information from DHCP
+  - Reliable source for device identification
   
-- **Fallback Method**: If Assets API returns no results:
-  - Query ARP table (`/api/v2/monitor/system/arp`)
-  - Query DHCP lease table (`/api/v2/monitor/system/dhcp`)
+- **Traffic-based Discovery**: Query active firewall sessions (`/api/v2/monitor/firewall/session`)
+  - Devices with active network traffic through the firewall
+  - Real-time detection of live devices
+  - Includes both source and destination devices
   
+- **Combined Approach**: Merges data from both sources for comprehensive discovery
+- **Hostname Enrichment**: Firewall session devices are enriched with hostnames from DHCP
 - **Parallel Operation**: Runs alongside nmap scanning for complementary discovery
 - **10-Minute Interval**: Queries Fortigate every 10 minutes
 
 #### Prerequisites
 
 - Fortigate firewall with REST API enabled (FortiOS 5.6 or later)
-- API key with appropriate permissions (read access to user device monitoring)
+- API key with appropriate permissions (read access to monitoring endpoints)
 - Network connectivity from sensor to Fortigate management interface
 - HTTPS access to Fortigate (typically port 443)
 
@@ -655,9 +658,9 @@ The sensor can optionally integrate with Fortigate firewalls to enhance device d
 4. Configure the API user:
    - Set a descriptive name (e.g., `easy-net-visibility`)
    - Select **Administrator profile**: Read-only profile or custom with these permissions:
-     - System: Configuration (Read)
+     - System: Monitor (Read)
      - Network: Monitor (Read)
-     - User & Device: Monitor (Read)
+     - Firewall: Monitor (Read)
 5. Click **OK**
 6. **Important**: Copy the generated API key immediately
    - The key is shown only once and cannot be retrieved later
@@ -697,36 +700,40 @@ validateSSL=False
 When Fortigate integration is enabled, the sensor will:
 
 1. **Every 10 minutes**:
-   - Query the FortiGate user device database (Assets API)
-   - If Assets API returns devices, use that data
-   - If no devices found, fallback to ARP and DHCP tables
+   - Query DHCP leases (`/api/v2/monitor/system/dhcp/select`) for devices with active leases
+   - Query firewall sessions (`/api/v2/monitor/firewall/session`) for devices with active traffic
+   - Merge data from both sources
+   - Enrich firewall session devices with hostnames from DHCP
    
 2. **Device Information Collected**:
-   - Hostname (from Assets or DHCP)
+   - Hostname (from DHCP when available)
    - IP address
    - MAC address
-   - OS name (from Assets when available)
    - Vendor (derived from MAC address OUI)
 
 3. **Normalization and Deduplication**:
-   - Combine data from multiple sources
+   - Combine data from both DHCP and firewall sessions
    - Remove duplicate entries (by MAC address)
    - Normalize MAC addresses to standard format
    
 4. **Send to Server**:
-   - Batch upload all discovered devices
+   - Batch upload all discovered live devices
    - Server merges with nmap-discovered devices
 
 #### Troubleshooting Fortigate Integration
 
 **Test API Access**:
 ```bash
-# Test from sensor host
+# Test DHCP API
 curl -k -H "Authorization: Bearer YOUR_API_KEY" \
-  "https://192.168.1.1/api/v2/monitor/user/device"
+  "https://192.168.1.1/api/v2/monitor/system/dhcp/select"
+
+# Test Firewall Session API
+curl -k -H "Authorization: Bearer YOUR_API_KEY" \
+  "https://192.168.1.1/api/v2/monitor/firewall/session?vdom=root&ip_version=ipv4&summary=true"
 ```
 
-Expected response: JSON array of device objects
+Expected response: JSON with status 'success' and array of results
 
 **Common Issues**:
 
@@ -747,10 +754,10 @@ Expected response: JSON array of device objects
    - Ensure certificate CN/SAN matches hostname
 
 4. **No Devices Returned**:
-   - Check Assets view in Fortigate GUI shows devices
-   - Verify devices are actually connected to Fortigate
-   - Try fallback to ARP/DHCP (automatic if Assets is empty)
+   - Check DHCP server is enabled and serving leases
+   - Verify devices have active traffic through the firewall
    - Check sensor logs for error messages
+   - Ensure API permissions include firewall and system monitoring
 
 **View Sensor Logs**:
 ```bash
@@ -759,8 +766,9 @@ docker logs easy-net-visibility-sensor
 
 Look for messages like:
 - `Fortigate integration enabled`
-- `Fortigate: Found X devices via Assets API`
-- `Fortigate: Falling back to ARP/DHCP`
+- `Retrieved X DHCP leases from Fortigate`
+- `Retrieved X firewall sessions from Fortigate`
+- `Fortigate discovered X live devices`
 - `Fortigate: Successfully sent X devices to server`
 
 #### Security Considerations
