@@ -12,22 +12,23 @@ import fortigate
 
 class TestFortigateInit(unittest.TestCase):
     def test_init_sets_credentials(self):
-        """Test that init properly sets connection parameters"""
+        """Test that init properly sets connection parameters with default VDOM"""
         fortigate.init('https://192.168.1.1', 'test_api_key_12345', False)
         
         self.assertEqual(fortigate._fortigate_host, 'https://192.168.1.1')
         self.assertEqual(fortigate._fortigate_api_key, 'test_api_key_12345')
         self.assertEqual(fortigate._validate_ssl, False)
-        self.assertIsNone(fortigate._vdom)
+        self.assertEqual(fortigate._vdom, 'root')  # Default is 'root'
     
-    def test_init_with_vdom(self):
-        """Test that init properly sets VDOM parameter"""
-        fortigate.init('https://192.168.1.1', 'test_api_key_12345', False, 'root')
+    def test_init_with_custom_vdom(self):
+        """Test that init properly sets custom VDOM parameter"""
+        fortigate.init('https://192.168.1.1', 'test_api_key_12345', False, 'customvdom')
         
         self.assertEqual(fortigate._fortigate_host, 'https://192.168.1.1')
         self.assertEqual(fortigate._fortigate_api_key, 'test_api_key_12345')
         self.assertEqual(fortigate._validate_ssl, False)
-        self.assertEqual(fortigate._vdom, 'root')
+        self.assertEqual(fortigate._vdom, 'customvdom')
+
 
 
 class TestFortigateAPIRequest(unittest.TestCase):
@@ -141,56 +142,9 @@ class TestFortigateFirewallSessions(unittest.TestCase):
         self.assertEqual(result, [])
     
     @patch('fortigate._make_api_request')
-    def test_get_firewall_sessions_424_with_vdom_retry_success(self, mock_request):
-        """Test firewall sessions handles 424 error with VDOM and retries successfully"""
-        # Initialize with VDOM
-        fortigate.init('https://192.168.1.1', 'test_api_key_12345', False, 'root')
-        
-        # Create a proper Response object and HTTPError with 424 status
-        mock_response = requests.Response()
-        mock_response.status_code = 424
-        mock_response._content = b'{"status": "error", "message": "Failed dependency"}'
-        http_error_424 = requests.exceptions.HTTPError(response=mock_response)
-        
-        # First call fails with 424, second call succeeds
-        mock_request.side_effect = [
-            http_error_424,  # First call with VDOM fails
-            {'status': 'success', 'results': [{'src': '192.168.1.10', 'srcmac': 'AA:BB:CC:DD:EE:FF'}]}  # Retry without VDOM succeeds
-        ]
-        
-        result = fortigate.get_firewall_sessions()
-        
-        # Should have retried and returned results
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]['src'], '192.168.1.10')
-        # Verify it was called twice (once with VDOM, once without)
-        self.assertEqual(mock_request.call_count, 2)
-    
-    @patch('fortigate._make_api_request')
-    def test_get_firewall_sessions_424_without_vdom_no_retry(self, mock_request):
-        """Test firewall sessions handles 424 error without VDOM (no retry)"""
-        # Initialize without VDOM
-        fortigate.init('https://192.168.1.1', 'test_api_key_12345', False, None)
-        
-        # Create a proper Response object and HTTPError with 424 status
-        mock_response = requests.Response()
-        mock_response.status_code = 424
-        mock_response._content = b'{"status": "error", "message": "Failed dependency"}'
-        http_error_424 = requests.exceptions.HTTPError(response=mock_response)
-        
-        mock_request.side_effect = http_error_424
-        
-        result = fortigate.get_firewall_sessions()
-        
-        # Should return empty list without retry
-        self.assertEqual(result, [])
-        # Verify it was only called once (no retry since no VDOM was specified)
-        self.assertEqual(mock_request.call_count, 1)
-    
-    @patch('fortigate._make_api_request')
     def test_get_firewall_sessions_with_vdom_parameter(self, mock_request):
-        """Test that firewall sessions uses VDOM parameter when configured"""
-        # Initialize with VDOM
+        """Test that firewall sessions uses VDOM parameter"""
+        # Initialize with custom VDOM
         fortigate.init('https://192.168.1.1', 'test_api_key_12345', False, 'customvdom')
         
         mock_request.return_value = {
@@ -205,10 +159,10 @@ class TestFortigateFirewallSessions(unittest.TestCase):
         self.assertIn('vdom=customvdom', called_endpoint)
     
     @patch('fortigate._make_api_request')
-    def test_get_firewall_sessions_without_vdom_parameter(self, mock_request):
-        """Test that firewall sessions works without VDOM parameter"""
-        # Initialize without VDOM
-        fortigate.init('https://192.168.1.1', 'test_api_key_12345', False, None)
+    def test_get_firewall_sessions_with_default_vdom(self, mock_request):
+        """Test that firewall sessions uses default 'root' VDOM"""
+        # Initialize with default VDOM
+        fortigate.init('https://192.168.1.1', 'test_api_key_12345', False)
         
         mock_request.return_value = {
             'status': 'success',
@@ -217,9 +171,9 @@ class TestFortigateFirewallSessions(unittest.TestCase):
         
         fortigate.get_firewall_sessions()
         
-        # Verify the endpoint does not include VDOM
+        # Verify the endpoint includes the default 'root' VDOM
         called_endpoint = mock_request.call_args[0][0]
-        self.assertNotIn('vdom=', called_endpoint)
+        self.assertIn('vdom=root', called_endpoint)
 
 
 class TestFortigateDiscoverDevices(unittest.TestCase):

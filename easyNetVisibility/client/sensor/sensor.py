@@ -136,13 +136,13 @@ def run():
                 else:
                     validate_ssl = True
 
-                # Get optional VDOM parameter
-                vdom = None
+                # Get optional VDOM parameter, default to 'root'
+                vdom = 'root'
                 if config.has_option('Fortigate', 'vdom'):
-                    vdom = config.get('Fortigate', 'vdom')
-                    # Empty string means no VDOM
-                    if vdom == '':
-                        vdom = None
+                    vdom_config = config.get('Fortigate', 'vdom')
+                    # Use configured value if not empty
+                    if vdom_config:
+                        vdom = vdom_config
 
                 fortigate.init(fortigate_host, fortigate_api_key, validate_ssl, vdom)
 
