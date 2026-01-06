@@ -97,16 +97,16 @@ def get_firewall_sessions():
     """
     try:
         _logger.info("Fetching firewall sessions from Fortigate")
-        
+
         # Build endpoint with optional VDOM parameter
         if _vdom:
             endpoint = f'/api/v2/monitor/firewall/session?vdom={_vdom}&ip_version=ipv4&summary=true'
         else:
             endpoint = '/api/v2/monitor/firewall/session?ip_version=ipv4&summary=true'
-        
+
         try:
             response = _make_api_request(endpoint)
-            
+
             if response.get('status') == 'success':
                 return response.get('results', [])
             else:
@@ -116,14 +116,14 @@ def get_firewall_sessions():
             # Handle 424 Failed Dependency - typically means VDOM issue
             if e.response.status_code == 424:
                 if _vdom:
-                    _logger.warning(f"Fortigate returned 424 Failed Dependency with VDOM '{_vdom}'. "
-                                  f"This may indicate the VDOM doesn't exist or API key lacks permission. "
-                                  f"Retrying without VDOM parameter...")
+                    _logger.warning(f"Fortigate returned 424 Failed Dependency with VDOM '{_vdom}'. " +
+                                    "This may indicate the VDOM doesn't exist or API key lacks permission. " +
+                                    "Retrying without VDOM parameter...")
                     # Retry without VDOM parameter
                     try:
                         endpoint_no_vdom = '/api/v2/monitor/firewall/session?ip_version=ipv4&summary=true'
                         response = _make_api_request(endpoint_no_vdom)
-                        
+
                         if response.get('status') == 'success':
                             _logger.info("Successfully retrieved firewall sessions without VDOM parameter")
                             return response.get('results', [])
@@ -134,8 +134,8 @@ def get_firewall_sessions():
                         _logger.error(f"Retry without VDOM also failed: {retry_error}")
                         return []
                 else:
-                    _logger.error(f"Fortigate returned 424 Failed Dependency. "
-                                f"Check your FortiGate configuration and API key permissions. Error: {e}")
+                    _logger.error("Fortigate returned 424 Failed Dependency. " +
+                                  f"Check your FortiGate configuration and API key permissions. Error: {e}")
                     return []
             else:
                 # Log and return empty list for other HTTP errors
