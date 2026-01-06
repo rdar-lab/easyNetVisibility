@@ -146,9 +146,10 @@ class TestFortigateFirewallSessions(unittest.TestCase):
         # Initialize with VDOM
         fortigate.init('https://192.168.1.1', 'test_api_key_12345', False, 'root')
         
-        # Create a proper HTTPError with 424 status
-        mock_response = MagicMock()
+        # Create a proper Response object and HTTPError with 424 status
+        mock_response = requests.Response()
         mock_response.status_code = 424
+        mock_response._content = b'{"status": "error", "message": "Failed dependency"}'
         http_error_424 = requests.exceptions.HTTPError(response=mock_response)
         
         # First call fails with 424, second call succeeds
@@ -171,9 +172,10 @@ class TestFortigateFirewallSessions(unittest.TestCase):
         # Initialize without VDOM
         fortigate.init('https://192.168.1.1', 'test_api_key_12345', False, None)
         
-        # Create a proper HTTPError with 424 status
-        mock_response = MagicMock()
+        # Create a proper Response object and HTTPError with 424 status
+        mock_response = requests.Response()
         mock_response.status_code = 424
+        mock_response._content = b'{"status": "error", "message": "Failed dependency"}'
         http_error_424 = requests.exceptions.HTTPError(response=mock_response)
         
         mock_request.side_effect = http_error_424

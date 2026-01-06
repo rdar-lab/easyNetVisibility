@@ -114,7 +114,7 @@ def get_firewall_sessions():
                 return []
         except requests.exceptions.HTTPError as e:
             # Handle 424 Failed Dependency - typically means VDOM issue
-            if hasattr(e.response, 'status_code') and e.response.status_code == 424:
+            if e.response.status_code == 424:
                 if _vdom:
                     _logger.warning(f"Fortigate returned 424 Failed Dependency with VDOM '{_vdom}'. "
                                   f"This may indicate the VDOM doesn't exist or API key lacks permission. "
@@ -138,7 +138,9 @@ def get_firewall_sessions():
                                 f"Check your FortiGate configuration and API key permissions. Error: {e}")
                     return []
             else:
-                raise  # Re-raise other HTTP errors
+                # Log and return empty list for other HTTP errors
+                _logger.error(f"HTTP error fetching firewall sessions: {e}")
+                return []
     except Exception as e:
         _logger.error(f"Error fetching firewall sessions: {e}")
         return []
