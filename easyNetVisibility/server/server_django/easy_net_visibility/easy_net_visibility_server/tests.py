@@ -2,7 +2,7 @@ import datetime
 from abc import ABC
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -265,7 +265,6 @@ class TestDeviceView(TestCase):
 
     def test_rename_device_without_csrf_token(self):
         """Test that rename_device works without CSRF token when CSRF_PROTECTION_ENABLED is False"""
-        from django.test import Client
         # Create a new client without CSRF token
         client = Client(enforce_csrf_checks=True)
         client.login(username='testuser', password='testpass')
@@ -282,7 +281,6 @@ class TestDeviceView(TestCase):
 
     def test_delete_device_without_csrf_token(self):
         """Test that delete_device works without CSRF token when CSRF_PROTECTION_ENABLED is False"""
-        from django.test import Client
         # Create a test device for deletion
         device_to_delete = Device.objects.create(
             nickname='DeleteWithoutCSRF',
