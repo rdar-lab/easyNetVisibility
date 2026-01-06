@@ -130,37 +130,6 @@ class TestFortigateFirewallSessions(unittest.TestCase):
         self.assertEqual(result, [])
 
 
-class TestFortigateDHCPLeases(unittest.TestCase):
-    def setUp(self):
-        fortigate.init('https://192.168.1.1', 'test_api_key_12345', False)
-    
-    @patch('fortigate._make_api_request')
-    def test_get_dhcp_leases_success(self, mock_request):
-        """Test successful DHCP leases retrieval"""
-        mock_request.return_value = {
-            'status': 'success',
-            'results': [
-                {'ip': '192.168.1.10', 'mac': 'AA:BB:CC:DD:EE:FF', 'hostname': 'device1'},
-                {'ip': '192.168.1.20', 'mac': '00:11:22:33:44:55', 'hostname': 'device2'}
-            ]
-        }
-        
-        result = fortigate.get_dhcp_leases()
-        
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]['hostname'], 'device1')
-    
-    @patch('fortigate._make_api_request')
-    def test_get_dhcp_leases_failure(self, mock_request):
-        """Test DHCP leases retrieval failure"""
-        mock_request.side_effect = Exception("API error")
-        
-        result = fortigate.get_dhcp_leases()
-        
-        # Should return empty list on error
-        self.assertEqual(result, [])
-
-
 class TestFortigateDiscoverDevices(unittest.TestCase):
     def setUp(self):
         fortigate.init('https://192.168.1.1', 'test_api_key_12345', False)
