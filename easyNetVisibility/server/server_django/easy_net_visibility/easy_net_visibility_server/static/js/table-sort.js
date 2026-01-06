@@ -36,19 +36,8 @@
         return aParts.length - bParts.length;
     }
 
-    // Parse date string "MM/DD/YYYY HH:MM:SS" to timestamp
-    function parseDateTime(dateStr) {
-        if (!dateStr) return 0;
-        var match = dateStr.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
-        if (!match) return 0;
-        
-        var monthRaw = parseInt(match[1], 10);
-        var day = parseInt(match[2], 10);
-        var year = parseInt(match[3], 10);
-        var hour = parseInt(match[4], 10);
-        var minute = parseInt(match[5], 10);
-        var second = parseInt(match[6], 10);
-
+    // Helper function to validate and create Date object
+    function validateAndCreateDate(year, monthRaw, day, hour, minute, second) {
         // Basic range validation
         if (isNaN(monthRaw) || isNaN(day) || isNaN(year) ||
             isNaN(hour) || isNaN(minute) || isNaN(second)) {
@@ -75,6 +64,39 @@
         }
 
         return d.getTime();
+    }
+
+    // Parse date string "MM/DD/YYYY HH:MM:SS" or "YYYY-MM-DD HH:MM:SS" to timestamp
+    function parseDateTime(dateStr) {
+        if (!dateStr) return 0;
+        
+        // Try ISO format first: YYYY-MM-DD HH:MM:SS
+        var isoMatch = dateStr.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/);
+        if (isoMatch) {
+            return validateAndCreateDate(
+                parseInt(isoMatch[1], 10),  // year
+                parseInt(isoMatch[2], 10),  // month
+                parseInt(isoMatch[3], 10),  // day
+                parseInt(isoMatch[4], 10),  // hour
+                parseInt(isoMatch[5], 10),  // minute
+                parseInt(isoMatch[6], 10)   // second
+            );
+        }
+        
+        // Try US format: MM/DD/YYYY HH:MM:SS
+        var usMatch = dateStr.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
+        if (usMatch) {
+            return validateAndCreateDate(
+                parseInt(usMatch[3], 10),  // year
+                parseInt(usMatch[1], 10),  // month
+                parseInt(usMatch[2], 10),  // day
+                parseInt(usMatch[4], 10),  // hour
+                parseInt(usMatch[5], 10),  // minute
+                parseInt(usMatch[6], 10)   // second
+            );
+        }
+        
+        return 0;
     }
 
     function sortTable(table, columnIndex, ascending) {
