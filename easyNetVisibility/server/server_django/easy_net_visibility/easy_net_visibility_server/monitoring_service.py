@@ -59,6 +59,10 @@ class NetworkMonitoringService:
         """Main monitoring loop that runs in the background."""
         logger.info("Network monitoring loop started")
 
+        # Wait briefly before first check to ensure Django initialization is complete
+        # This avoids the "Accessing the database during app initialization" warning
+        self._stop_event.wait(timeout=1)
+
         while not self._stop_event.is_set():
             try:
                 self._check_gateway_timeouts()
