@@ -703,6 +703,11 @@ apiKey=your_actual_api_key_here
 # Set to False only for self-signed certificates in testing
 # Use True in production with valid certificates
 validateSSL=False
+
+# Virtual Domain (VDOM) name (optional)
+# Leave commented out or empty if VDOM is not used
+# Common value: root
+# vdom=root
 ```
 
 **Configuration Notes**:
@@ -712,6 +717,10 @@ validateSSL=False
 - `validateSSL`: 
   - `True`: Validate SSL certificates (recommended for production)
   - `False`: Skip validation (for self-signed certificates in lab/testing)
+- `vdom`: (Optional) Virtual Domain name
+  - Omit this parameter if your FortiGate doesn't use VDOMs
+  - Set to the VDOM name (e.g., `root`) if required
+  - If set incorrectly, the sensor will automatically retry without VDOM
 
 #### How It Works
 
@@ -746,9 +755,13 @@ When Fortigate integration is enabled, the sensor will:
 curl -k -H "Authorization: Bearer YOUR_API_KEY" \
   "https://192.168.1.1/api/v2/monitor/system/dhcp/select"
 
-# Test Firewall Session API
+# Test Firewall Session API (with VDOM)
 curl -k -H "Authorization: Bearer YOUR_API_KEY" \
   "https://192.168.1.1/api/v2/monitor/firewall/session?vdom=root&ip_version=ipv4&summary=true"
+
+# Test Firewall Session API (without VDOM - use if VDOM is not enabled)
+curl -k -H "Authorization: Bearer YOUR_API_KEY" \
+  "https://192.168.1.1/api/v2/monitor/firewall/session?ip_version=ipv4&summary=true"
 ```
 
 Expected response: JSON with status 'success' and array of results
@@ -766,12 +779,19 @@ Expected response: JSON with status 'success' and array of results
    - Check API admin user is not disabled/locked
    - Verify API admin profile has required permissions
 
-3. **Certificate Errors** (when validateSSL=True):
+3. **424 Failed Dependency** (VDOM-related):
+   - This error occurs when the VDOM parameter is incorrect or not permitted
+   - Try omitting the `vdom` parameter from your config.ini
+   - If VDOM is required, verify the correct VDOM name using FortiGate CLI: `config global; get system status`
+   - Check that your API key has permission to access the specified VDOM
+   - The sensor will automatically retry without VDOM if a 424 error occurs
+
+4. **Certificate Errors** (when validateSSL=True):
    - Use `validateSSL=False` for self-signed certificates
    - For production, install valid certificates on Fortigate
    - Ensure certificate CN/SAN matches hostname
 
-4. **No Devices Returned**:
+5. **No Devices Returned**:
    - Check DHCP server is enabled and serving leases
    - Verify devices have active traffic through the firewall
    - Check sensor logs for error messages
