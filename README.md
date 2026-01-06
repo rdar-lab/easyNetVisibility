@@ -15,6 +15,7 @@
 ## Table of Contents
 
 - [Overview](#overview)
+- [Screenshots](#screenshots)
 - [Features](#features)
 - [Architecture](#architecture)
 - [Quick Start](#quick-start)
@@ -57,6 +58,23 @@ This project was originally based on the open-source SweedSecurity project, with
 - Enhanced UI for managing large numbers of devices
 - Added Fortigate firewall integration
 - Added comprehensive notification system
+
+## Screenshots
+
+### Dashboard - Device List
+The main dashboard displays all discovered devices on your network with their IP addresses, MAC addresses, vendors, and open ports.
+
+![Dashboard showing a list of discovered network devices with IP addresses, MAC addresses, vendors, and open ports](screenshots/dashboard-main.png)
+
+### Device Details
+Click on any device to view detailed information including hostname, network details, and all open ports with service identification.
+
+![Device details page showing hostname, network information, and comprehensive port scan results including services and versions](screenshots/device-detail-with-ports.png)
+
+### Sensor Status
+Monitor the health and status of your network sensors to ensure continuous monitoring.
+
+![Sensor status monitoring page displaying the health and operational status of network sensors with last seen timestamps](screenshots/status-page.png)
 
 ## Features
 
