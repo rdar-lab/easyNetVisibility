@@ -36,59 +36,8 @@
         return aParts.length - bParts.length;
     }
 
-    // Parse date string "MM/DD/YYYY HH:MM:SS" or "YYYY-MM-DD HH:MM:SS" to timestamp
-    function parseDateTime(dateStr) {
-        if (!dateStr) return 0;
-        
-        // Try ISO format first: YYYY-MM-DD HH:MM:SS
-        var isoMatch = dateStr.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/);
-        if (isoMatch) {
-            var year = parseInt(isoMatch[1], 10);
-            var monthRaw = parseInt(isoMatch[2], 10);
-            var day = parseInt(isoMatch[3], 10);
-            var hour = parseInt(isoMatch[4], 10);
-            var minute = parseInt(isoMatch[5], 10);
-            var second = parseInt(isoMatch[6], 10);
-
-            // Basic range validation
-            if (isNaN(monthRaw) || isNaN(day) || isNaN(year) ||
-                isNaN(hour) || isNaN(minute) || isNaN(second)) {
-                return 0;
-            }
-
-            if (monthRaw < 1 || monthRaw > 12) return 0;
-            if (day < 1 || day > 31) return 0;
-            if (hour < 0 || hour > 23) return 0;
-            if (minute < 0 || minute > 59) return 0;
-            if (second < 0 || second > 59) return 0;
-
-            var monthIndex = monthRaw - 1;
-            var d = new Date(year, monthIndex, day, hour, minute, second);
-
-            // Ensure Date did not normalize an invalid value
-            if (d.getFullYear() !== year ||
-                d.getMonth() !== monthIndex ||
-                d.getDate() !== day ||
-                d.getHours() !== hour ||
-                d.getMinutes() !== minute ||
-                d.getSeconds() !== second) {
-                return 0;
-            }
-
-            return d.getTime();
-        }
-        
-        // Try US format: MM/DD/YYYY HH:MM:SS
-        var usMatch = dateStr.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
-        if (!usMatch) return 0;
-        
-        var monthRaw = parseInt(usMatch[1], 10);
-        var day = parseInt(usMatch[2], 10);
-        var year = parseInt(usMatch[3], 10);
-        var hour = parseInt(usMatch[4], 10);
-        var minute = parseInt(usMatch[5], 10);
-        var second = parseInt(usMatch[6], 10);
-
+    // Helper function to validate and create Date object
+    function validateAndCreateDate(year, monthRaw, day, hour, minute, second) {
         // Basic range validation
         if (isNaN(monthRaw) || isNaN(day) || isNaN(year) ||
             isNaN(hour) || isNaN(minute) || isNaN(second)) {
@@ -115,6 +64,39 @@
         }
 
         return d.getTime();
+    }
+
+    // Parse date string "MM/DD/YYYY HH:MM:SS" or "YYYY-MM-DD HH:MM:SS" to timestamp
+    function parseDateTime(dateStr) {
+        if (!dateStr) return 0;
+        
+        // Try ISO format first: YYYY-MM-DD HH:MM:SS
+        var isoMatch = dateStr.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/);
+        if (isoMatch) {
+            return validateAndCreateDate(
+                parseInt(isoMatch[1], 10),  // year
+                parseInt(isoMatch[2], 10),  // month
+                parseInt(isoMatch[3], 10),  // day
+                parseInt(isoMatch[4], 10),  // hour
+                parseInt(isoMatch[5], 10),  // minute
+                parseInt(isoMatch[6], 10)   // second
+            );
+        }
+        
+        // Try US format: MM/DD/YYYY HH:MM:SS
+        var usMatch = dateStr.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
+        if (usMatch) {
+            return validateAndCreateDate(
+                parseInt(usMatch[3], 10),  // year
+                parseInt(usMatch[1], 10),  // month
+                parseInt(usMatch[2], 10),  // day
+                parseInt(usMatch[4], 10),  // hour
+                parseInt(usMatch[5], 10),  // minute
+                parseInt(usMatch[6], 10)   // second
+            );
+        }
+        
+        return 0;
     }
 
     function sortTable(table, columnIndex, ascending) {
