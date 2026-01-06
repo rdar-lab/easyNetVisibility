@@ -26,8 +26,18 @@ def get_subnet(ip_address, prefix_length=24):
 
 @login_required
 def home(request):
-    devices_list = Device.objects.prefetch_related('port_set').order_by('ip')
+    devices_list = Device.objects.prefetch_related('port_set').all()
     visible_devices = [device for device in devices_list if not device.is_hidden()]
+
+    # Sort devices by IP address numerically
+    def ip_sort_key(device):
+        try:
+            return ipaddress.ip_address(device.ip)
+        except (ValueError, ipaddress.AddressValueError):
+            # Put invalid IPs at the end
+            return ipaddress.ip_address('255.255.255.255')
+
+    visible_devices.sort(key=ip_sort_key)
 
     # Group devices by subnet
     devices_by_subnet = defaultdict(list)

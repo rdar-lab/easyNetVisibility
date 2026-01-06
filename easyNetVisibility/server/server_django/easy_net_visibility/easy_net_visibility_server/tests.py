@@ -150,6 +150,61 @@ class TestDeviceView(TestCase):
         self.assertIn('Device2', response_content)
         self.assertIn('Device3', response_content)
 
+    def test_home_view_ip_sorting(self):
+        # Create devices with IPs that would sort incorrectly if sorted as strings
+        Device.objects.create(
+            nickname='Device1',
+            hostname='host1',
+            ip='10.2.2.1',
+            mac='AABBCCDDEE01',
+            vendor='Vendor1',
+            first_seen=timezone.now(),
+            last_seen=timezone.now()
+        )
+        Device.objects.create(
+            nickname='Device2',
+            hostname='host2',
+            ip='10.2.2.10',
+            mac='AABBCCDDEE02',
+            vendor='Vendor2',
+            first_seen=timezone.now(),
+            last_seen=timezone.now()
+        )
+        Device.objects.create(
+            nickname='Device3',
+            hostname='host3',
+            ip='10.2.2.2',
+            mac='AABBCCDDEE03',
+            vendor='Vendor3',
+            first_seen=timezone.now(),
+            last_seen=timezone.now()
+        )
+        Device.objects.create(
+            nickname='Device4',
+            hostname='host4',
+            ip='10.2.2.139',
+            mac='AABBCCDDEE04',
+            vendor='Vendor4',
+            first_seen=timezone.now(),
+            last_seen=timezone.now()
+        )
+
+        response = self.client.get(reverse('home'))
+        response_content = response.content.decode()
+        self.assertEqual(response.status_code, 200)
+
+        # Find positions of IPs in the response
+        pos_1 = response_content.find('10.2.2.1')
+        pos_2 = response_content.find('10.2.2.2')
+        pos_10 = response_content.find('10.2.2.10')
+        pos_139 = response_content.find('10.2.2.139')
+
+        # Verify IPs are sorted numerically, not lexicographically
+        # Correct order: 10.2.2.1, 10.2.2.2, 10.2.2.10, 10.2.2.139
+        self.assertLess(pos_1, pos_2, "10.2.2.1 should come before 10.2.2.2")
+        self.assertLess(pos_2, pos_10, "10.2.2.2 should come before 10.2.2.10")
+        self.assertLess(pos_10, pos_139, "10.2.2.10 should come before 10.2.2.139")
+
     def test_rename_device(self):
         response = self.client.post(reverse('rename_device'), {
             'device_id': self.device.id,

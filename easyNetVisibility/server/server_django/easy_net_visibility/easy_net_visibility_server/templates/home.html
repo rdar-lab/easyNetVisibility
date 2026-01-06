@@ -2,6 +2,8 @@
 
 {% block content %}
 
+<script src="/static/js/table-sort.js"></script>
+
 <section>
 
     {% if deviceList|length == 0 %}
@@ -24,7 +26,7 @@
             Subnet: {{ subnet }}
         </h3>
         <div class="container">
-        <table style="width: 100%; min-width: 800px; table-layout: fixed;">
+        <table class="sortable-table" style="width: 100%; min-width: 800px; table-layout: fixed;">
             <thead>
             <tr style="border-bottom: 2px solid #000;">
                 <th nowrap>Name</th>
