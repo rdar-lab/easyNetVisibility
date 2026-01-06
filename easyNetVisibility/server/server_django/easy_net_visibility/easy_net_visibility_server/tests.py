@@ -2,7 +2,7 @@ import datetime
 from abc import ABC
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -262,6 +262,47 @@ class TestDeviceView(TestCase):
         self.assertFalse(Device.objects.filter(id=invalid_id).exists())
         # The response should contain the capitalized warning message
         self.assertContains(response, "Device matching query does not exist")
+
+    def test_rename_device_without_csrf_token(self):
+        """Test that rename_device works without CSRF token when CSRF_PROTECTION_ENABLED is False"""
+        # Create a new client without CSRF token
+        client = Client(enforce_csrf_checks=True)
+        client.login(username='testuser', password='testpass')
+
+        # This should work because CSRF_PROTECTION_ENABLED is False in settings
+        response = client.post(reverse('rename_device'), {
+            'device_id': self.device.id,
+            'nickname': 'NewNameWithoutCSRF'
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.device.refresh_from_db()
+        self.assertEqual(self.device.nickname, 'NewNameWithoutCSRF')
+
+    def test_delete_device_without_csrf_token(self):
+        """Test that delete_device works without CSRF token when CSRF_PROTECTION_ENABLED is False"""
+        # Create a test device for deletion
+        device_to_delete = Device.objects.create(
+            nickname='DeleteWithoutCSRF',
+            hostname='deletehost',
+            ip='10.0.0.99',
+            mac='AABBCCDDEE99',
+            vendor='Vendor',
+            first_seen=timezone.now(),
+            last_seen=timezone.now()
+        )
+
+        # Create a new client without CSRF token
+        client = Client(enforce_csrf_checks=True)
+        client.login(username='testuser', password='testpass')
+
+        # This should work because CSRF_PROTECTION_ENABLED is False in settings
+        response = client.post(reverse('delete_device'), {
+            'device_id': device_to_delete.id
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Device.objects.filter(id=device_to_delete.id).exists())
 
 
 class BaseDeviceApiTest(ABC, TestCase):
