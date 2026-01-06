@@ -16,9 +16,10 @@ _logger = logging.getLogger('EasyNetVisibility')
 _fortigate_host = None
 _fortigate_api_key = None
 _validate_ssl = True
+_vdom = None
 
 
-def init(host, api_key, validate_ssl=True):
+def init(host, api_key, validate_ssl=True, vdom=None):
     """
     Initialize Fortigate connection parameters.
 
@@ -26,14 +27,19 @@ def init(host, api_key, validate_ssl=True):
         host: Fortigate IP or hostname (e.g., 'https://192.168.1.1')
         api_key: Fortigate API key for authentication
         validate_ssl: Whether to validate SSL certificates
+        vdom: Virtual Domain name (optional, defaults to None which means no VDOM parameter)
     """
-    global _fortigate_host, _fortigate_api_key, _validate_ssl
+    global _fortigate_host, _fortigate_api_key, _validate_ssl, _vdom
 
     _fortigate_host = host
     _fortigate_api_key = api_key
     _validate_ssl = validate_ssl
+    _vdom = vdom
 
-    _logger.info(f"Fortigate integration initialized for host: {host}")
+    if vdom:
+        _logger.info(f"Fortigate integration initialized for host: {host}, VDOM: {vdom}")
+    else:
+        _logger.info(f"Fortigate integration initialized for host: {host} (no VDOM specified)")
 
 
 def _make_api_request(endpoint):
@@ -91,14 +97,48 @@ def get_firewall_sessions():
     """
     try:
         _logger.info("Fetching firewall sessions from Fortigate")
-        # Query firewall sessions with summary to get unique devices
-        response = _make_api_request('/api/v2/monitor/firewall/session?vdom=root&ip_version=ipv4&summary=true')
-
-        if response.get('status') == 'success':
-            return response.get('results', [])
+        
+        # Build endpoint with optional VDOM parameter
+        if _vdom:
+            endpoint = f'/api/v2/monitor/firewall/session?vdom={_vdom}&ip_version=ipv4&summary=true'
         else:
-            _logger.warning(f"Fortigate firewall session request returned non-success status: {response}")
-            return []
+            endpoint = '/api/v2/monitor/firewall/session?ip_version=ipv4&summary=true'
+        
+        try:
+            response = _make_api_request(endpoint)
+            
+            if response.get('status') == 'success':
+                return response.get('results', [])
+            else:
+                _logger.warning(f"Fortigate firewall session request returned non-success status: {response}")
+                return []
+        except requests.exceptions.HTTPError as e:
+            # Handle 424 Failed Dependency - typically means VDOM issue
+            if hasattr(e.response, 'status_code') and e.response.status_code == 424:
+                if _vdom:
+                    _logger.warning(f"Fortigate returned 424 Failed Dependency with VDOM '{_vdom}'. "
+                                  f"This may indicate the VDOM doesn't exist or API key lacks permission. "
+                                  f"Retrying without VDOM parameter...")
+                    # Retry without VDOM parameter
+                    try:
+                        endpoint_no_vdom = '/api/v2/monitor/firewall/session?ip_version=ipv4&summary=true'
+                        response = _make_api_request(endpoint_no_vdom)
+                        
+                        if response.get('status') == 'success':
+                            _logger.info("Successfully retrieved firewall sessions without VDOM parameter")
+                            return response.get('results', [])
+                        else:
+                            _logger.warning(f"Fortigate firewall session request returned non-success status: {response}")
+                            return []
+                    except Exception as retry_error:
+                        _logger.error(f"Retry without VDOM also failed: {retry_error}")
+                        return []
+                else:
+                    _logger.error(f"Fortigate returned 424 Failed Dependency. "
+                                f"Check your FortiGate configuration and API key permissions. Error: {e}")
+                    return []
+            else:
+                raise  # Re-raise other HTTP errors
     except Exception as e:
         _logger.error(f"Error fetching firewall sessions: {e}")
         return []
