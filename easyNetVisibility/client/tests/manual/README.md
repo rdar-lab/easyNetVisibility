@@ -128,7 +128,6 @@ python test_generic_router_manual.py \
 | Option | Description | Required | Default |
 |--------|-------------|----------|---------|
 | `--host` | Router URL (e.g., http://192.168.1.1) | Yes | - |
-| `--password` | Admin password | Yes | - |
 | `--no-ssl-verify` | Skip SSL certificate verification | No | False |
 
 ### Router-Specific Options
@@ -138,6 +137,7 @@ python test_generic_router_manual.py \
 
 **OpenWRT, DD-WRT, Generic Router:**
 - `--username`: Admin username (Optional, has defaults)
+- `--password`: Admin password (Required)
 
 ## Output Format
 
