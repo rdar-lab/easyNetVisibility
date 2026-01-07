@@ -669,3 +669,29 @@ center {
   color: #b0b0b0;
   font-weight: 500;
 }
+
+/* Logout form button styling */
+.navbar-inverse .navbar-nav > li > form {
+  margin: 0;
+  padding: 0;
+}
+
+.navbar-inverse .navbar-nav > li > form > button {
+  background: none;
+  border: none;
+  color: #b0b0b0;
+  cursor: pointer;
+  padding: 15px;
+  font-size: 14px;
+  display: block;
+  width: 100%;
+  text-align: left;
+  transition: all 0.3s ease;
+  border-bottom: 2px solid transparent;
+}
+
+.navbar-inverse .navbar-nav > li > form > button:hover {
+  color: #5dade2;
+  background-color: rgba(93, 173, 226, 0.1);
+  border-bottom-color: #5dade2;
+}
