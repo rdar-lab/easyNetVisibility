@@ -1,5 +1,6 @@
 .idea
 .venv
+venv/
 __pycache__/
 *.pyc
 *.pyo
@@ -10,3 +11,4 @@ htmlcov/
 *.egg-info/
 dist/
 build/
+*.sqlite3

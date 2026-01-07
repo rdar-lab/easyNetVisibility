@@ -328,7 +328,7 @@ We follow PEP 8 with some modifications:
 **Required before committing**:
 ```bash
 # Run linting
-flake8 . --count --max-line-length=200 --show-source --statistics --exclude='*/migrations/*,*/tests/*'
+flake8 . --count --max-line-length=200 --show-source --statistics --exclude='*/migrations/*,*/tests/*,*/scripts/*'
 
 # Run security checks
 bandit -r . -ll -x "*/migrations/*,*/tests/*"

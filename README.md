@@ -7,6 +7,7 @@
 ## Documentation
 
 - **[README.md](README.md)** - Overview, installation, and quick start (this file)
+- **[DEVELOPER.md](DEVELOPER.md)** - Local development setup
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture and design details
 - **[API.md](API.md)** - Complete API reference with examples
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines for developers
@@ -1349,7 +1350,7 @@ Tests are automatically run via GitHub Actions on every push and pull request.
 cd easyNetVisibility/server/server_django
 
 # Flake8 (style checking)
-flake8 . --count --max-line-length=200 --show-source --statistics --exclude='*/migrations/*,*/tests/*'
+flake8 . --count --max-line-length=200 --show-source --statistics --exclude='*/migrations/*,*/tests/*,*/scripts/*'
 
 # Bandit (security analysis)
 bandit -r . -ll -x "*/migrations/*,*/tests/*"

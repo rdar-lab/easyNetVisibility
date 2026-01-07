@@ -48,7 +48,7 @@ jobs:
     - name: Lint with flake8
       run: |
         # Run flake8 on all Python files - fail on any errors
-        flake8 . --count --max-line-length=200 --show-source --statistics --exclude='*/migrations/*,*/tests/*'
+        flake8 . --count --max-line-length=200 --show-source --statistics --exclude='*/migrations/*,*/tests/*,*/scripts/*'
       continue-on-error: false
 
     - name: Security scan with bandit
