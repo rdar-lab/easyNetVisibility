@@ -1,3 +1,9 @@
+/* Dark Theme Styles */
+body {
+  background-color: #1a1a1a;
+  color: #e0e0e0;
+}
+
 /* The switch - the box around the slider */
 .switch {
   position: relative;
@@ -55,4 +61,148 @@ input:checked + .slider:before {
 
 .slider.round:before {
   border-radius: 50%;
+}
+
+/* Dark theme overrides */
+.jumbotron {
+  background-color: #2a2a2a;
+  color: #e0e0e0;
+}
+
+.jumbotron h1 {
+  color: #e0e0e0;
+}
+
+.jumbotron a {
+  color: #5dade2;
+}
+
+table {
+  background-color: #2a2a2a;
+  color: #e0e0e0;
+}
+
+table thead th {
+  background-color: #333;
+  color: #e0e0e0;
+  border-bottom: 2px solid #555;
+}
+
+table tbody tr {
+  border-bottom: 1px solid #444;
+}
+
+table tbody td {
+  color: #e0e0e0;
+}
+
+hr {
+  border-color: #444;
+}
+
+h3 {
+  color: #e0e0e0;
+  border-bottom-color: #555 !important;
+}
+
+/* Modal dark theme */
+.modal-content {
+  background-color: #2a2a2a;
+  color: #e0e0e0;
+}
+
+.modal-header {
+  background-color: #333;
+  color: #e0e0e0;
+  border-bottom: 1px solid #444;
+}
+
+.modal-header .close {
+  color: #e0e0e0;
+  opacity: 0.8;
+}
+
+.modal-body {
+  background-color: #2a2a2a;
+  color: #e0e0e0;
+}
+
+.modal-footer {
+  background-color: #2a2a2a;
+  border-top: 1px solid #444;
+}
+
+/* Form controls dark theme */
+.form-control {
+  background-color: #333;
+  color: #e0e0e0;
+  border: 1px solid #555;
+}
+
+.form-control:focus {
+  background-color: #3a3a3a;
+  color: #e0e0e0;
+  border-color: #5dade2;
+  box-shadow: 0 0 0 0.2rem rgba(93, 173, 226, 0.25);
+}
+
+/* Panel dark theme */
+.panel {
+  background-color: #2a2a2a;
+  border: 1px solid #444;
+}
+
+.panel-heading {
+  background-color: #333 !important;
+  color: #e0e0e0 !important;
+  border-bottom: 1px solid #444;
+}
+
+.panel-body {
+  background-color: #2a2a2a;
+  color: #e0e0e0;
+}
+
+.panel-primary > .panel-heading {
+  background-color: #1f4d7a !important;
+  border-color: #1f4d7a;
+}
+
+.panel-danger > .panel-heading {
+  background-color: #7a1f1f !important;
+  border-color: #7a1f1f;
+}
+
+/* W3 card dark theme */
+.w3-card-4 {
+  background-color: #2a2a2a;
+  color: #e0e0e0;
+}
+
+.w3-container {
+  color: #e0e0e0;
+}
+
+.w3-light-grey {
+  background-color: #333 !important;
+  color: #e0e0e0 !important;
+}
+
+/* Footer dark theme */
+#footer-div {
+  background-color: #1a1a1a;
+  color: #888;
+}
+
+/* Alerts dark theme */
+.alert {
+  background-color: #2a2a2a;
+  border-color: #444;
+  color: #e0e0e0;
+}
+
+.alert-danger {
+  background-color: #5a1f1f;
+  border-color: #7a1f1f;
+  color: #f8d7da;
 }
