@@ -26,7 +26,8 @@
             Subnet: {{ subnet }}
         </h3>
         <div style="margin-left: 15px; margin-right: 15px;">
-        <table class="sortable-table" style="width: 100%; min-width: 800px; table-layout: auto;">
+        <div class="table-responsive-mobile">
+        <table class="sortable-table" style="width: 100%; table-layout: auto;">
             <thead>
             <tr style="border-bottom: 2px solid #555;">
                 <th nowrap data-sort-type="text">Name</th>
@@ -106,6 +107,7 @@
 
             </tbody>
         </table>
+        </div>
         </div>
     </div>
     {% endfor %}

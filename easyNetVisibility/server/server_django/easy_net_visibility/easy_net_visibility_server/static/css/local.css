@@ -1,7 +1,14 @@
 /* Dark Theme Styles */
+html {
+  height: 100%;
+}
+
 body {
   background-color: #1a1a1a;
   color: #e0e0e0;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 /* The switch - the box around the slider */
@@ -201,10 +208,12 @@ h3 {
   color: #e0e0e0 !important;
 }
 
-/* Footer dark theme */
+/* Footer dark theme - sticky at bottom */
 #footer-div {
   background-color: #1a1a1a;
   color: #888;
+  margin-top: auto;
+  padding: 15px 0;
 }
 
 /* Alerts dark theme */
@@ -218,4 +227,181 @@ h3 {
   background-color: #5a1f1f;
   border-color: #7a1f1f;
   color: #f8d7da;
+}
+
+/* Mobile Responsive Styles */
+/* Table wrapper for horizontal scroll on mobile */
+.table-responsive-mobile {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Limit table width on large screens for better aesthetics */
+@media (min-width: 1200px) {
+  .table-responsive-mobile {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  
+  #main-div {
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+}
+
+/* Ensure tables don't break mobile layout */
+@media (max-width: 768px) {
+  /* Reduce container margins on mobile */
+  .container {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  
+  table {
+    font-size: 13px;
+  }
+  
+  table tbody td,
+  table thead th {
+    padding: 8px 6px;
+    white-space: nowrap;
+  }
+  
+  /* Make buttons more compact but touch-friendly */
+  .w3-btn-block {
+    padding: 8px 10px;
+    font-size: 13px;
+    min-width: 90px;
+  }
+  
+  /* Improve modal display on mobile */
+  .modal-dialog {
+    margin: 10px;
+  }
+  
+  /* Better spacing for device details on mobile */
+  .panel-body .row {
+    margin-bottom: 8px;
+  }
+  
+  /* Make device info labels stack properly on mobile */
+  .panel-body .row .col-xs-3 {
+    text-align: left !important;
+    margin-bottom: 2px;
+  }
+  
+  .panel-body .row .col-xs-3 .pull-right {
+    float: none !important;
+  }
+  
+  /* Make navbar more compact on mobile - !important needed to override inline styles */
+  .navbar-brand img {
+    width: 50px !important;
+    height: 35px !important;
+    margin-top: -5px !important;
+  }
+  
+  /* Make navbar thinner on mobile */
+  .navbar {
+    min-height: 40px;
+    margin-bottom: 0;
+  }
+  
+  .navbar-header {
+    min-height: 40px;
+  }
+  
+  .navbar-toggle {
+    margin-top: 3px;
+    margin-bottom: 3px;
+    padding: 6px 8px;
+  }
+  
+  .navbar-brand {
+    padding: 3px 15px;
+    height: 40px;
+    line-height: 34px;
+  }
+  
+  /* Better h3 sizing on mobile */
+  h3 {
+    font-size: 22px;
+  }
+  
+  /* Hide ports panel on mobile - too complex for small screens */
+  #portPanel {
+    display: none !important;
+  }
+  
+  /* Show message when ports are hidden on mobile */
+  .panel-heading a[href="#portPanel"]::after {
+    content: " (view on larger screen)";
+    font-size: 11px;
+    font-style: italic;
+    opacity: 0.8;
+  }
+}
+
+/* Extra small devices (phones, less than 576px) */
+@media (max-width: 575px) {
+  body {
+    font-size: 13px;
+  }
+  
+  h3 {
+    font-size: 18px;
+  }
+  
+  /* Make device info full width on very small screens */
+  .panel-body .row .col-xs-3,
+  .panel-body .row .col-xs-9 {
+    width: 100%;
+    float: none;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  
+  .panel-body .row .col-xs-3 strong {
+    display: block;
+    margin-bottom: 3px;
+  }
+  
+  /* Reduce padding on containers */
+  .with-margins {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+  
+  /* Make table text smaller on phones but maintain readability */
+  table {
+    font-size: 12px;
+  }
+  
+  table tbody td,
+  table thead th {
+    padding: 6px 4px;
+  }
+  
+  /* Compact buttons on small screens */
+  .w3-btn-block {
+    padding: 6px 8px;
+    font-size: 12px;
+    min-width: 80px;
+  }
+  
+  /* Better panel spacing */
+  .panel {
+    margin-bottom: 10px;
+  }
+  
+  .panel-heading {
+    font-size: 14px;
+    padding: 8px 10px;
+  }
+  
+  /* Status page button sizing */
+  .btn-danger.btn-sm {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
 }
