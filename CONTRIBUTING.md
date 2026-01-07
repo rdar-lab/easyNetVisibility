@@ -161,6 +161,95 @@ cd sensor
 python sensor.py
 ```
 
+### Managing Dependencies
+
+The project uses `pip-compile` from the `pip-tools` package to manage dependencies. This ensures reproducible builds with pinned versions while making updates straightforward.
+
+#### File Structure
+
+- **`requirements.in`**: Source file listing direct dependencies (usually without version pins)
+- **`requirements.txt`**: Auto-generated file with all dependencies and their pinned versions (committed to git)
+
+#### Installing Dependencies (Normal Development)
+
+```bash
+# Server
+cd easyNetVisibility/server/server_django
+pip install -r requirements.txt
+
+# Client
+cd easyNetVisibility/client
+pip install -r requirements.txt
+```
+
+#### Updating Dependencies
+
+When dependencies need to be updated:
+
+1. **Install pip-tools**:
+```bash
+pip install pip-tools
+```
+
+2. **Update the pinned versions**:
+```bash
+# For server
+cd easyNetVisibility/server/server_django
+pip-compile --output-file=requirements.txt requirements.in
+
+# For client
+cd easyNetVisibility/client
+pip-compile --output-file=requirements.txt requirements.in
+```
+
+3. **Test the updates**:
+```bash
+pip install -r requirements.txt
+# Run tests to verify compatibility
+python manage.py test  # server
+pytest tests/           # client
+```
+
+4. **Commit both files**:
+```bash
+git add requirements.in requirements.txt
+git commit -m "Update dependencies"
+```
+
+#### Adding New Dependencies
+
+1. **Edit `requirements.in`** to add the package (without version unless specifically needed):
+```bash
+echo "new-package" >> requirements.in
+```
+
+2. **Regenerate requirements.txt**:
+```bash
+pip-compile --output-file=requirements.txt requirements.in
+```
+
+3. **Check for security vulnerabilities** (if using supported ecosystems):
+   - The project uses GitHub's advisory database to check for known vulnerabilities
+   - Test thoroughly before committing
+
+4. **Test and commit**:
+```bash
+pip install -r requirements.txt
+# Run tests
+git add requirements.in requirements.txt
+git commit -m "Add new-package dependency"
+```
+
+#### Using pip-sync for Clean Environments
+
+To ensure your environment exactly matches `requirements.txt`:
+
+```bash
+pip-sync requirements.txt
+```
+
+This installs packages from `requirements.txt` and removes any packages not listed.
+
 ### Docker Development
 
 **Build and test server**:
