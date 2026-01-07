@@ -1,20 +1,23 @@
 {% extends 'base.html' %}
 {% block content %}
-<!- Refresh Page Every 5 Seconds ->
-<!- meta http-equiv="refresh" content="5" ->
-<section>
+<!-- Refresh Page Every 5 Seconds -->
+<!-- <meta http-equiv="refresh" content="5"> -->
+<section style="animation: fadeIn 0.5s ease;">
     <div class="container">
         <div class="panel-group">
             {% if sensors_list|length == 0 %}
             <div class="jumbotron">
-                <p>No sensors connected yet. </p>
+                <h2><span class="glyphicon glyphicon-warning-sign" style="margin-right: 10px; color: #f0ad4e;"></span>No Sensors Connected</h2>
+                <p>No sensors connected yet. Deploy a sensor to start monitoring your network.</p>
             </div>
             {% endif %}
 
 
             {% for sensor in sensors_list %}
-            <div class="panel panel-danger">
-                <div class="panel-heading">Sensor - <b>{{sensor.hostname}}</b></div>
+            <div class="panel panel-danger" style="animation: fadeInUp 0.6s ease;">
+                <div class="panel-heading">
+                    <span class="glyphicon glyphicon-dashboard" style="margin-right: 8px;"></span>Sensor - <b>{{sensor.hostname}}</b>
+                </div>
                 <div class="panel-body">
                     <div class="row">
                         <div class="col-xs-5"><strong>Mac address</strong></div>
@@ -32,7 +35,8 @@
                     </div>
                     <br/>
                     <button onclick="deleteSensor('{{sensor.id}}')" type="button"
-                            class="btn btn-danger btn-sm">Delete Sensor
+                            class="btn btn-danger btn-sm">
+                        <span class="glyphicon glyphicon-remove" style="margin-right: 5px;"></span>Delete Sensor
                     </button>
                 </div>
             </div>

@@ -8,10 +8,11 @@
 
     {% if deviceList|length == 0 %}
     <div class="container">
-        <div class="jumbotron">
+        <div class="jumbotron" style="text-align: center;">
+            <span class="glyphicon glyphicon-search" style="font-size: 64px; color: #5dade2; margin-bottom: 20px; display: block;"></span>
             <h1>Welcome to Easy Net Visibility</h1>
-            <p>There have been no devices discovered yet. Head over to <a href="/status">status tab</a> to make sure
-                everything is running properly. </p>
+            <p style="font-size: 18px; margin-top: 20px;">There have been no devices discovered yet. Head over to the <a href="/status">status tab</a> to make sure
+                everything is running properly.</p>
         </div>
     </div>
     {% endif %}
@@ -21,9 +22,9 @@
     <br/>
 
     {% for subnet, devices in groupedDevices %}
-    <div style="margin-bottom: 30px;">
-        <h3 style="margin-left: 15px; margin-right: 15px; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 3px solid #555;">
-            Subnet: {{ subnet }}
+    <div class="subnet-section" style="margin-bottom: 40px;">
+        <h3 style="margin-left: 15px; margin-right: 15px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 3px solid #5dade2; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);">
+            <span class="glyphicon glyphicon-signal" style="margin-right: 10px; color: #5dade2;"></span>Subnet: {{ subnet }}
         </h3>
         <div style="margin-left: 15px; margin-right: 15px;">
         <div class="table-responsive-mobile">
@@ -51,16 +52,16 @@
                 <td nowrap>{{device.ip|safe}}</td>
                 <td nowrap>{{device.mac|safe}}</td>
                 <td nowrap>{{device.vendor|safe}}</td>
-                <td class="w3-{% if device.first_seen_today %}red{% else %}white{% endif %}" nowrap>
+                <td class="w3-{% if device.first_seen_today %}red{% else %}default{% endif %}" nowrap>
                     {{device.first_seen|date:"Y-m-d H:i:s"}}
                 </td>
-                <td class="w3-{% if device.online %}white{% else %}red{% endif %}" nowrap>
+                <td class="w3-{% if device.online %}default{% else %}red{% endif %}" nowrap>
                     {{device.last_seen|date:"Y-m-d H:i:s"}}
                 </td>
                 <td nowrap>{{device.port_set.all|length}}</td>
                 <td nowrap>
-                    <button class="w3-btn-block w3-dark-grey" onclick="location.href='/device/{{device.id}}'">More
-                        Info...
+                    <button class="w3-btn-block w3-dark-grey" onclick="location.href='/device/{{device.id}}'" style="cursor: pointer;">
+                        <span class="glyphicon glyphicon-info-sign" style="margin-right: 5px;"></span>More Info
                     </button>
                 </td>
             </tr>

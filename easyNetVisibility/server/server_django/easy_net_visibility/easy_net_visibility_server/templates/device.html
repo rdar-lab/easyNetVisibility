@@ -6,9 +6,11 @@
     <div class="container">
         <div class="row">
             <div class="col-xs-12">
-                <div class="w3-card-4">
+                <div class="w3-card-4" style="animation: fadeInUp 0.6s ease;">
                     <header class="w3-container w3-light-grey">
-                        <h3 class="pull-left">{{deviceInfo.name|safe}}</h3>
+                        <h3 class="pull-left" style="margin: 0; line-height: 1.5;">
+                            <span class="glyphicon glyphicon-hdd" style="margin-right: 10px; color: #5dade2;"></span>{{deviceInfo.name|safe}}
+                        </h3>
                     </header>
                     <div class="w3-container">
                         <div class="panel-group">
@@ -63,9 +65,12 @@
 
                         <div class="panel-group">
                             <div class="panel panel-primary">
-                                <div class="panel-heading">Open Ports ({{deviceInfo.port_set.all|length}})<a
-                                        data-toggle="collapse" href="#portPanel" class="pull-right"><span
-                                        class="glyphicon glyphicon-plus"></span></a></div>
+                                <div class="panel-heading">
+                                    <span class="glyphicon glyphicon-list" style="margin-right: 8px;"></span>Open Ports ({{deviceInfo.port_set.all|length}})
+                                    <a data-toggle="collapse" href="#portPanel" class="pull-right" style="color: inherit;">
+                                        <span class="glyphicon glyphicon-plus"></span>
+                                    </a>
+                                </div>
                                 <div id="portPanel" class="panel-collapse collapse">
                                     <div class="panel-body">
                                         <div class="table-responsive-mobile">
@@ -97,7 +102,8 @@
 
 
                         <button type="button" class="btn btn-danger btn-lg" data-toggle="modal"
-                                data-target="#deleteDeviceModal">Delete Device
+                                data-target="#deleteDeviceModal" style="margin-top: 10px;">
+                            <span class="glyphicon glyphicon-trash" style="margin-right: 8px;"></span>Delete Device
                         </button>
 
                         <br/>
