@@ -135,44 +135,7 @@ def get_dhcp_leases():
         return []
 
 
-def get_arp_table():
-    """
-    Get ARP table from DD-WRT.
 
-    Parses the ARP table to find active devices.
-
-    Returns:
-        list: List of ARP entries with IP and MAC information
-    """
-    try:
-        _logger.info("Fetching ARP table from DD-WRT")
-
-        # Try to get ARP table from status page
-        response_text = _make_request('/Status_Lan.asp')
-
-        arp_entries = []
-
-        # Parse ARP table from HTML
-        # Pattern for ARP table entries
-        arp_pattern = r'<tr[^>]*>.*?<td[^>]*>(\d+\.\d+\.\d+\.\d+)</td>.*?<td[^>]*>([0-9A-Fa-f:]+)</td>'
-        matches = re.findall(arp_pattern, response_text, re.DOTALL)
-
-        for match in matches:
-            ip = match[0].strip()
-            mac = match[1].strip()
-
-            if mac and ip:
-                arp_entries.append({
-                    'ip': ip,
-                    'mac': mac
-                })
-
-        _logger.info(f"Retrieved {len(arp_entries)} ARP entries from DD-WRT")
-        return arp_entries
-
-    except Exception as e:
-        _logger.error(f"Error fetching ARP table: {e}")
-        return []
 
 
 def get_wireless_clients():
@@ -217,8 +180,7 @@ def discover_devices():
 
     Uses multiple sources to identify active devices:
     1. DHCP leases - devices with active DHCP assignments
-    2. ARP table - devices with recent network activity
-    3. Wireless clients - devices connected to WiFi
+    2. Wireless clients - devices connected to WiFi
 
     Returns:
         list: List of device dictionaries with keys: hostname, ip, mac, vendor
@@ -249,29 +211,7 @@ def discover_devices():
     else:
         _logger.info("No DHCP leases returned from DD-WRT")
 
-    # Method 2: Get devices from ARP table
-    arp_entries = get_arp_table()
-    if arp_entries:
-        _logger.info(f"Retrieved {len(arp_entries)} ARP entries from DD-WRT")
-        for entry in arp_entries:
-            ip = entry.get('ip', '')
-            mac = entry.get('mac', '')
-
-            if ip and mac:
-                mac_normalized = network_utils.convert_mac(mac)
-
-                # Add if not already present from DHCP
-                if mac_normalized not in devices:
-                    devices[mac_normalized] = {
-                        'hostname': ip,  # Use IP as hostname if no DHCP info
-                        'ip': ip,
-                        'mac': mac_normalized,
-                        'vendor': 'Unknown'
-                    }
-    else:
-        _logger.info("No ARP entries returned from DD-WRT")
-
-    # Method 3: Get wireless clients and enrich with existing data
+    # Method 2: Get wireless clients and enrich with existing data
     wireless_clients = get_wireless_clients()
     if wireless_clients:
         _logger.info(f"Retrieved {len(wireless_clients)} wireless clients from DD-WRT")

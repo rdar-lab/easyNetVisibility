@@ -816,8 +816,6 @@ In addition to Fortigate, the sensor supports integration with several popular c
 1. **Fortigate** - Enterprise firewall (see section above for detailed documentation)
 2. **OpenWRT** - Open-source router firmware
 3. **DD-WRT** - Popular third-party router firmware
-4. **Bezeq Be** - Israeli ISP router series
-5. **Partner Fiber** - Israeli ISP fiber router series
 
 #### General Features
 
@@ -891,62 +889,7 @@ validateSSL=True
 
 **API Methods**:
 - DHCP leases from status pages
-- ARP table entries
 - Wireless client information
-
-##### Bezeq Be Router Configuration
-
-```ini
-[Bezeq]
-# Enable Bezeq Be router integration
-enabled=True
-
-# Bezeq router host
-host=http://192.168.1.1
-
-# Bezeq router admin username
-username=admin
-
-# Bezeq router admin password
-password=your_password_here
-
-# SSL certificate validation
-validateSSL=True
-```
-
-**Prerequisites**:
-- Bezeq Be router (Israel)
-- Admin credentials
-- HTTP/HTTPS access to router from sensor
-
-**Note**: Bezeq routers may use different web interface layouts. The integration attempts multiple common endpoints to maximize compatibility.
-
-##### Partner Fiber Router Configuration
-
-```ini
-[Partner]
-# Enable Partner Fiber router integration
-enabled=True
-
-# Partner router host
-host=http://192.168.1.1
-
-# Partner router admin username
-username=admin
-
-# Partner router admin password
-password=your_password_here
-
-# SSL certificate validation
-validateSSL=True
-```
-
-**Prerequisites**:
-- Partner Fiber router (Israel)
-- Admin credentials
-- HTTP/HTTPS access to router from sensor
-
-**Note**: Partner routers may use different web interface layouts. The integration attempts multiple common endpoints to maximize compatibility.
 
 #### Testing Router Integrations
 
@@ -966,16 +909,6 @@ python test_openwrt_manual.py --host http://192.168.1.1 --username root --passwo
 **Test DD-WRT Integration**:
 ```bash
 python test_ddwrt_manual.py --host http://192.168.1.1 --username admin --password YOUR_PASSWORD
-```
-
-**Test Bezeq Integration**:
-```bash
-python test_bezeq_manual.py --host http://192.168.1.1 --username admin --password YOUR_PASSWORD
-```
-
-**Test Partner Integration**:
-```bash
-python test_partner_manual.py --host http://192.168.1.1 --username admin --password YOUR_PASSWORD
 ```
 
 Each test script:

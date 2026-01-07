@@ -16,8 +16,6 @@ Each test script:
 1. **test_fortigate_manual.py** - Tests Fortigate firewall integration
 2. **test_openwrt_manual.py** - Tests OpenWRT router integration
 3. **test_ddwrt_manual.py** - Tests DD-WRT router integration
-4. **test_bezeq_manual.py** - Tests Bezeq Be router integration
-5. **test_partner_manual.py** - Tests Partner Fiber router integration
 
 ## Prerequisites
 
@@ -105,47 +103,20 @@ python test_ddwrt_manual.py \
 - Admin credentials (default username is usually 'admin')
 - HTTP/HTTPS access to router
 
-### Bezeq Be Router
 
 ```bash
 # Basic usage
-python test_bezeq_manual.py \
+python  \
     --host http://192.168.1.1 \
     --username admin \
     --password YOUR_PASSWORD
 
 # With custom settings
-python test_bezeq_manual.py \
+python  \
     --host http://10.0.0.1 \
     --username user \
     --password YOUR_PASSWORD
 ```
-
-**Requirements:**
-- Bezeq Be router (Israel)
-- Admin credentials
-- HTTP/HTTPS access to router
-
-### Partner Fiber Router
-
-```bash
-# Basic usage
-python test_partner_manual.py \
-    --host http://192.168.1.1 \
-    --username admin \
-    --password YOUR_PASSWORD
-
-# With custom settings
-python test_partner_manual.py \
-    --host http://10.0.0.1 \
-    --username user \
-    --password YOUR_PASSWORD
-```
-
-**Requirements:**
-- Partner Fiber router (Israel)
-- Admin credentials
-- HTTP/HTTPS access to router
 
 ## Command-Line Options
 
@@ -162,7 +133,7 @@ python test_partner_manual.py \
 **Fortigate:**
 - `--api-key`: API key for authentication (Required)
 
-**OpenWRT, DD-WRT, Bezeq, Partner:**
+**OpenWRT, DD-WRT:**
 - `--username`: Admin username (Optional, has defaults)
 
 ## Output Format
@@ -270,8 +241,8 @@ These test scripts use the **exact same code** as the production sensor integrat
 - `test_fortigate_manual.py` uses `/sensor/fortigate.py`
 - `test_openwrt_manual.py` uses `/sensor/openwrt.py`
 - `test_ddwrt_manual.py` uses `/sensor/ddwrt.py`
-- `test_bezeq_manual.py` uses `/sensor/bezeq.py`
-- `test_partner_manual.py` uses `/sensor/partner.py`
+- `` uses `/sensor/bezeq.py`
+- `` uses `/sensor/partner.py`
 
 This ensures that:
 - Testing reflects actual production behavior

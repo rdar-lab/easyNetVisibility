@@ -13,8 +13,6 @@ import server_api
 fortigate = None
 openwrt = None
 ddwrt = None
-bezeq = None
-partner = None
 
 try:
     import fortigate as fortigate_module
@@ -31,18 +29,6 @@ except ImportError:
 try:
     import ddwrt as ddwrt_module
     ddwrt = ddwrt_module
-except ImportError:
-    pass
-
-try:
-    import bezeq as bezeq_module
-    bezeq = bezeq_module
-except ImportError:
-    pass
-
-try:
-    import partner as partner_module
-    partner = partner_module
 except ImportError:
     pass
 
@@ -128,42 +114,6 @@ def start_ddwrt_scan():
                 continue
         except Exception as e:
             _logger.exception("DD-WRT scan error: " + str(e))
-
-        sleep(60 * 10)  # Scan every 10 minutes
-
-
-def start_bezeq_scan():
-    """Scan Bezeq router for devices."""
-    while 1:
-        try:
-            if bezeq:
-                devices = bezeq.discover_devices()
-                _logger.info(f"Bezeq detected {len(devices)} devices")
-                if len(devices) > 0:
-                    server_api.add_devices(devices)
-            else:
-                _logger.warning("Bezeq module not available")
-                continue
-        except Exception as e:
-            _logger.exception("Bezeq scan error: " + str(e))
-
-        sleep(60 * 10)  # Scan every 10 minutes
-
-
-def start_partner_scan():
-    """Scan Partner Fiber router for devices."""
-    while 1:
-        try:
-            if partner:
-                devices = partner.discover_devices()
-                _logger.info(f"Partner detected {len(devices)} devices")
-                if len(devices) > 0:
-                    server_api.add_devices(devices)
-            else:
-                _logger.warning("Partner module not available")
-                continue
-        except Exception as e:
-            _logger.exception("Partner scan error: " + str(e))
 
         sleep(60 * 10)  # Scan every 10 minutes
 
@@ -321,82 +271,6 @@ def run():
         _logger.warning("DD-WRT is enabled in config but module is not available")
     else:
         _logger.info("DD-WRT integration is disabled")
-
-    # Initialize Bezeq if configured
-    bezeq_enabled = False
-    if config.has_section('Bezeq') and config.has_option('Bezeq', 'enabled'):
-        bezeq_enabled_param = config.get('Bezeq', 'enabled')
-        bezeq_enabled = bezeq_enabled_param.lower() in ['true', '1', 'yes']
-
-    if bezeq_enabled and bezeq:
-        _logger.info("Bezeq integration is enabled")
-
-        if not config.has_option('Bezeq', 'host'):
-            _logger.error("Bezeq enabled but 'host' option is missing in config")
-        elif not config.has_option('Bezeq', 'username'):
-            _logger.error("Bezeq enabled but 'username' option is missing in config")
-        elif not config.has_option('Bezeq', 'password'):
-            _logger.error("Bezeq enabled but 'password' option is missing in config")
-        else:
-            try:
-                bezeq_host = config.get('Bezeq', 'host')
-                bezeq_username = config.get('Bezeq', 'username')
-                bezeq_password = config.get('Bezeq', 'password')
-
-                if config.has_option('Bezeq', 'validateSSL'):
-                    validate_ssl_param = config.get('Bezeq', 'validateSSL')
-                    validate_ssl = validate_ssl_param.lower() not in ['false', '0', 'no']
-                else:
-                    validate_ssl = True
-
-                bezeq.init(bezeq_host, bezeq_username, bezeq_password, validate_ssl)
-
-                bezeq_thread = threading.Thread(target=start_bezeq_scan)
-                bezeq_thread.start()
-            except Exception as e:
-                _logger.error(f"Failed to initialize Bezeq integration: {e}")
-    elif bezeq_enabled and not bezeq:
-        _logger.warning("Bezeq is enabled in config but module is not available")
-    else:
-        _logger.info("Bezeq integration is disabled")
-
-    # Initialize Partner if configured
-    partner_enabled = False
-    if config.has_section('Partner') and config.has_option('Partner', 'enabled'):
-        partner_enabled_param = config.get('Partner', 'enabled')
-        partner_enabled = partner_enabled_param.lower() in ['true', '1', 'yes']
-
-    if partner_enabled and partner:
-        _logger.info("Partner integration is enabled")
-
-        if not config.has_option('Partner', 'host'):
-            _logger.error("Partner enabled but 'host' option is missing in config")
-        elif not config.has_option('Partner', 'username'):
-            _logger.error("Partner enabled but 'username' option is missing in config")
-        elif not config.has_option('Partner', 'password'):
-            _logger.error("Partner enabled but 'password' option is missing in config")
-        else:
-            try:
-                partner_host = config.get('Partner', 'host')
-                partner_username = config.get('Partner', 'username')
-                partner_password = config.get('Partner', 'password')
-
-                if config.has_option('Partner', 'validateSSL'):
-                    validate_ssl_param = config.get('Partner', 'validateSSL')
-                    validate_ssl = validate_ssl_param.lower() not in ['false', '0', 'no']
-                else:
-                    validate_ssl = True
-
-                partner.init(partner_host, partner_username, partner_password, validate_ssl)
-
-                partner_thread = threading.Thread(target=start_partner_scan)
-                partner_thread.start()
-            except Exception as e:
-                _logger.error(f"Failed to initialize Partner integration: {e}")
-    elif partner_enabled and not partner:
-        _logger.warning("Partner is enabled in config but module is not available")
-    else:
-        _logger.info("Partner integration is disabled")
 
     health_check_thread = threading.Thread(target=start_health_check)
     health_check_thread.start()
