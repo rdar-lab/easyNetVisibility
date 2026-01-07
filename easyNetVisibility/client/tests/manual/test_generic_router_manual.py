@@ -6,7 +6,7 @@ This script tests the generic router heuristic API integration by connecting to 
 router and displaying discovered devices.
 
 Usage:
-    python test_generic_router_manual.py --host http://192.168.1.1 --username admin --password PASSWORD --router-name "MyRouter" [--no-ssl-verify]
+    python test_generic_router_manual.py --host http://192.168.1.1 --username admin --password PASSWORD [--no-ssl-verify]
 
 Requirements:
     - Access to a router with web interface
@@ -98,7 +98,7 @@ def main():
         router_generic.init(
             host=args.host,
             username=args.username,
-            ******
+            password=args.password,
             validate_ssl=not args.no_ssl_verify
         )
         print("✓ Connection initialized successfully\n")

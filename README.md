@@ -983,7 +983,7 @@ See `/easyNetVisibility/client/tests/manual/README.md` for complete testing docu
 
 **View Sensor Logs**:
 ```bash
-docker logs easy-net-visibility-sensor | grep -E "(OpenWRT|DDWRT|Bezeq|Partner)"
+docker logs easy-net-visibility-sensor | grep -E "(OpenWRT|DDWRT|Generic router)"
 ```
 
 Look for messages like:

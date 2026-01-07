@@ -108,11 +108,6 @@ def main():
         dhcp_leases = ddwrt.get_dhcp_leases()
         print(f"✓ Retrieved {len(dhcp_leases)} DHCP leases\n")
 
-        # Test ARP table
-        print("Testing ARP table retrieval...")
-        arp_table = ddwrt.get_arp_table()
-        print(f"✓ Retrieved {len(arp_table)} ARP entries\n")
-
         # Test wireless clients
         print("Testing wireless client retrieval...")
         wireless_clients = ddwrt.get_wireless_clients()

@@ -135,9 +135,6 @@ def get_dhcp_leases():
         return []
 
 
-
-
-
 def get_wireless_clients():
     """
     Get wireless clients from DD-WRT.

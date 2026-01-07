@@ -244,8 +244,7 @@ These test scripts use the **exact same code** as the production sensor integrat
 - `test_fortigate_manual.py` uses `/sensor/fortigate.py`
 - `test_openwrt_manual.py` uses `/sensor/openwrt.py`
 - `test_ddwrt_manual.py` uses `/sensor/ddwrt.py`
-- `` uses `/sensor/bezeq.py`
-- `` uses `/sensor/partner.py`
+- `test_generic_router_manual.py` uses `/sensor/router_generic.py`
 
 This ensures that:
 - Testing reflects actual production behavior

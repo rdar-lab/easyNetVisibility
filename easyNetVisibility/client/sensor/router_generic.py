@@ -112,7 +112,7 @@ def get_dhcp_leases():
         _logger.info(f"Fetching DHCP leases from Generic router")
 
         leases = []
-        
+
         # Try common DHCP status endpoints
         endpoints = [
             '/status.html',
@@ -128,46 +128,46 @@ def get_dhcp_leases():
         for endpoint in endpoints:
             try:
                 response_text = _make_request(endpoint)
-                
+
                 # Parse HTML to extract DHCP lease information
                 # Try multiple common patterns
-                
+
                 # Pattern 1: Standard table format with hostname, MAC, IP
                 lease_pattern = r'<tr[^>]*>.*?<td[^>]*>([^<]*)</td>.*?<td[^>]*>([0-9A-Fa-f:]+)</td>.*?<td[^>]*>(\d+\.\d+\.\d+\.\d+)</td>'
                 matches = re.findall(lease_pattern, response_text, re.DOTALL)
-                
+
                 for match in matches:
                     hostname = match[0].strip()
                     mac = match[1].strip()
                     ip = match[2].strip()
-                    
+
                     if mac and ip:
                         leases.append({
                             'hostname': hostname if hostname and hostname not in ['-', '', 'N/A', 'Unknown'] else '',
                             'mac': mac,
                             'ip': ip
                         })
-                
+
                 # Pattern 2: Alternative table format (IP, MAC, hostname order)
                 if not leases:
                     lease_pattern2 = r'<tr[^>]*>.*?<td[^>]*>(\d+\.\d+\.\d+\.\d+)</td>.*?<td[^>]*>([0-9A-Fa-f:]+)</td>.*?<td[^>]*>([^<]*)</td>'
                     matches2 = re.findall(lease_pattern2, response_text, re.DOTALL)
-                    
+
                     for match in matches2:
                         ip = match[0].strip()
                         mac = match[1].strip()
                         hostname = match[2].strip()
-                        
+
                         if mac and ip:
                             leases.append({
                                 'hostname': hostname if hostname and hostname not in ['-', '', 'N/A', 'Unknown'] else '',
                                 'mac': mac,
                                 'ip': ip
                             })
-                
+
                 if leases:
                     break  # Found leases, stop trying endpoints
-                    
+
             except Exception as e:
                 _logger.debug(f"Could not fetch from {endpoint}: {e}")
                 continue
@@ -194,7 +194,7 @@ def get_connected_devices():
         _logger.info(f"Fetching connected devices from Generic router")
 
         devices = []
-        
+
         # Try common device status endpoints
         endpoints = [
             '/status.html',
@@ -208,40 +208,40 @@ def get_connected_devices():
         for endpoint in endpoints:
             try:
                 response_text = _make_request(endpoint)
-                
+
                 # Parse for device information
                 # Pattern 1: IP followed by MAC
                 device_pattern = r'(\d+\.\d+\.\d+\.\d+)[^0-9A-Fa-f]*([0-9A-Fa-f:]{17})'
                 matches = re.findall(device_pattern, response_text)
-                
+
                 for match in matches:
                     ip = match[0].strip()
                     mac = match[1].strip()
-                    
+
                     if mac and ip:
                         devices.append({
                             'ip': ip,
                             'mac': mac
                         })
-                
+
                 # Pattern 2: MAC followed by IP (try reverse if no results)
                 if not devices:
                     device_pattern2 = r'([0-9A-Fa-f:]{17})[^0-9]*(\d+\.\d+\.\d+\.\d+)'
                     matches2 = re.findall(device_pattern2, response_text)
-                    
+
                     for match in matches2:
                         mac = match[0].strip()
                         ip = match[1].strip()
-                        
+
                         if mac and ip:
                             devices.append({
                                 'ip': ip,
                                 'mac': mac
                             })
-                
+
                 if devices:
                     break  # Found devices, stop trying endpoints
-                    
+
             except Exception as e:
                 _logger.debug(f"Could not fetch from {endpoint}: {e}")
                 continue
