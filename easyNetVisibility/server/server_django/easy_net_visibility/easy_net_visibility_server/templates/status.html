@@ -26,7 +26,7 @@
                                 class="glyphicon {% if sensor.online %}glyphicon-ok-sign"
                                 style="color:green" {% else %}glyphicon-exclamation-sign"
                             style="color:red"{%endif%}></span></div>
-                        <div class="col-xs-7">{{sensor.last_seen}} ({{sensor.time_since_last_seen}} minutes
+                        <div class="col-xs-7">{{sensor.last_seen|date:"Y-m-d H:i:s"}} ({{sensor.time_since_last_seen}} minutes
                             ago)
                         </div>
                     </div>
