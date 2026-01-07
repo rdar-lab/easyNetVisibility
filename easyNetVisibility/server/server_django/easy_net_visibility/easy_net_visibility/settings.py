@@ -117,6 +117,10 @@ USE_L10N = True
 
 USE_TZ = False
 
+# Custom datetime format to exclude milliseconds/microseconds
+# Format: YYYY-MM-DD HH:MM:SS (e.g., 2023-05-19 13:38:17)
+DATETIME_FORMAT = 'Y-m-d H:i:s'
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 

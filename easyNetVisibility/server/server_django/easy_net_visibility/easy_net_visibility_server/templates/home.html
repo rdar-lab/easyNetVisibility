@@ -51,10 +51,10 @@
                 <td nowrap>{{device.mac|safe}}</td>
                 <td nowrap>{{device.vendor|safe}}</td>
                 <td class="w3-{% if device.first_seen_today %}red{% else %}white{% endif %}" nowrap>
-                    {{device.first_seen|safe}}
+                    {{device.first_seen|date:"Y-m-d H:i:s"}}
                 </td>
                 <td class="w3-{% if device.online %}white{% else %}red{% endif %}" nowrap>
-                    {{device.last_seen|safe}}
+                    {{device.last_seen|date:"Y-m-d H:i:s"}}
                 </td>
                 <td nowrap>{{device.port_set.all|length}}</td>
                 <td nowrap>
