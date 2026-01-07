@@ -11,8 +11,8 @@ This is intended as a starting point that can be improved after testing with rea
 """
 
 import logging
-import warnings
 import re
+import warnings
 
 import requests
 
@@ -109,7 +109,7 @@ def get_dhcp_leases():
         list: List of DHCP lease entries with IP, MAC, and hostname information
     """
     try:
-        _logger.info(f"Fetching DHCP leases from Generic router")
+        _logger.info("Fetching DHCP leases from Generic router")
 
         leases = []
 
@@ -155,8 +155,13 @@ def get_dhcp_leases():
 
                 # Pattern 2: Alternative table format (IP, MAC, hostname order)
                 if not leases:
-                    lease_pattern2 = r'<tr[^>]*>.*?<td[^>]*>(\d+\.\d+\.\d+\.\d+)</td>.*?<td[^>]*>([0-9A-Fa-f:]+)</td>.*?<td[^>]*>([^<]*)</td>'
-                    matches2 = re.findall(lease_pattern2, response_text, re.DOTALL)
+                    lease_pattern2 = (
+                        r'<tr[^>]*>\s*'
+                        r'<td[^>]*>(\d+\.\d+\.\d+\.\d+)</td>\s*'
+                        r'<td[^>]*>([0-9A-Fa-f:]+)</td>\s*'
+                        r'<td[^>]*>([^<]*)</td>'
+                    )
+                    matches2 = re.findall(lease_pattern2, response_text)
 
                     for match in matches2:
                         ip = match[0].strip()
@@ -165,7 +170,8 @@ def get_dhcp_leases():
 
                         if mac and ip:
                             leases.append({
-                                'hostname': hostname if hostname and hostname not in ['-', '', 'N/A', 'Unknown'] else '',
+                                'hostname': hostname if hostname and hostname not in ['-', '', 'N/A',
+                                                                                      'Unknown'] else '',
                                 'mac': mac,
                                 'ip': ip
                             })
@@ -196,7 +202,7 @@ def get_connected_devices():
         list: List of device entries with MAC and IP information
     """
     try:
-        _logger.info(f"Fetching connected devices from Generic router")
+        _logger.info("Fetching connected devices from Generic router")
 
         devices = []
 
@@ -270,7 +276,7 @@ def discover_devices():
     Returns:
         list: List of device dictionaries with keys: hostname, ip, mac, vendor
     """
-    _logger.info(f"Starting Generic router device discovery")
+    _logger.info("Starting Generic router device discovery")
 
     devices = {}
 
@@ -294,7 +300,7 @@ def discover_devices():
                     'vendor': 'Unknown'
                 }
     else:
-        _logger.info(f"No DHCP leases returned from Generic router")
+        _logger.info("No DHCP leases returned from Generic router")
 
     # Method 2: Get connected devices
     connected_devices = get_connected_devices()
@@ -316,7 +322,7 @@ def discover_devices():
                         'vendor': 'Unknown'
                     }
     else:
-        _logger.info(f"No connected devices returned from Generic router")
+        _logger.info("No connected devices returned from Generic router")
 
     result_devices = list(devices.values())
     _logger.info(f"Generic router discovered {len(result_devices)} devices")

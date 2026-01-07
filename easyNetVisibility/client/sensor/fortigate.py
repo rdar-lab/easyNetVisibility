@@ -117,7 +117,8 @@ def get_firewall_sessions():
             summary = results.get('summary', {})
             matched_count = summary.get('matched_count', 0)
 
-            _logger.debug(f"Retrieved {len(details)} sessions, total so far: {len(all_results)}, matched_count: {matched_count}")
+            _logger.debug(
+                f"Retrieved {len(details)} sessions, total so far: {len(all_results)}, matched_count: {matched_count}")
 
             # If we've retrieved all matched sessions, stop
             if len(all_results) >= matched_count:

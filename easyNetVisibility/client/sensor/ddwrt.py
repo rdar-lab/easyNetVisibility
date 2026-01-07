@@ -1,6 +1,6 @@
 import logging
-import warnings
 import re
+import warnings
 
 import requests
 
