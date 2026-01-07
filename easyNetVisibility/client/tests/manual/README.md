@@ -111,15 +111,7 @@ python test_ddwrt_manual.py \
 python test_generic_router_manual.py \
     --host http://192.168.1.1 \
     --username admin \
-    --password YOUR_PASSWORD \
-    --router-name "Bezeq Be"
-
-# For Partner router
-python test_generic_router_manual.py \
-    --host http://192.168.1.1 \
-    --username admin \
-    --password YOUR_PASSWORD \
-    --router-name "Partner Fiber"
+    --password YOUR_PASSWORD
 ```
 
 **Requirements:**
@@ -146,9 +138,6 @@ python test_generic_router_manual.py \
 
 **OpenWRT, DD-WRT, Generic Router:**
 - `--username`: Admin username (Optional, has defaults)
-
-**Generic Router Only:**
-- `--router-name`: Display name for the router (e.g., "Bezeq", "Partner")
 
 ## Output Format
 

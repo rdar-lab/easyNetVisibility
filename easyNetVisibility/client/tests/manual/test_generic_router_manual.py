@@ -75,11 +75,6 @@ def main():
         help='Router admin password'
     )
     parser.add_argument(
-        '--router-name',
-        default='Generic',
-        help='Router name for logging (e.g., "Bezeq", "Partner")'
-    )
-    parser.add_argument(
         '--no-ssl-verify',
         action='store_true',
         help='Disable SSL certificate verification (use for self-signed certs)'
@@ -90,23 +85,21 @@ def main():
     setup_logging()
 
     print("\n" + "="*80)
-    print(f"Generic Router Integration Test - {args.router_name}")
+    print(f"Generic Router Integration Test")
     print("="*80)
     print(f"Host: {args.host}")
     print(f"Username: {args.username}")
-    print(f"Router Name: {args.router_name}")
     print(f"SSL Verification: {'Disabled' if args.no_ssl_verify else 'Enabled'}")
     print("="*80 + "\n")
 
     try:
         # Initialize generic router integration
-        print(f"Initializing {args.router_name} router connection...")
+        print(f"Initializing Generic router connection...")
         router_generic.init(
             host=args.host,
             username=args.username,
             ******
-            validate_ssl=not args.no_ssl_verify,
-            router_name=args.router_name
+            validate_ssl=not args.no_ssl_verify
         )
         print("✓ Connection initialized successfully\n")
 

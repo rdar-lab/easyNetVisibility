@@ -816,7 +816,7 @@ In addition to Fortigate, the sensor supports integration with several popular c
 1. **Fortigate** - Enterprise firewall (see section above for detailed documentation)
 2. **OpenWRT** - Open-source router firmware
 3. **DD-WRT** - Popular third-party router firmware
-4. **Generic Router** - Heuristic approach for any router (e.g., Bezeq Be, Partner Fiber, or other ISP routers)
+4. **Generic Router** - Heuristic approach for any router without specific API documentation
 
 #### General Features
 
@@ -897,26 +897,16 @@ validateSSL=True
 For routers without specific API support, use the generic heuristic approach. This integration attempts to discover devices using common patterns across various router interfaces.
 
 ```ini
-[GenericRouter_Bezeq]
+[GenericRouter]
 enabled=True
 host=http://192.168.1.1
 username=admin
 password=your_password
 validateSSL=True
-routerName=Bezeq Be
-
-[GenericRouter_Partner]
-enabled=True
-host=http://192.168.1.1
-username=admin
-password=your_password
-validateSSL=True
-routerName=Partner Fiber
 ```
 
 **Configuration Notes**:
-- Section name must start with `GenericRouter_` followed by a unique identifier
-- `routerName`: Display name for logging (e.g., "Bezeq Be", "Partner Fiber")
+- Use section name `[GenericRouter]`
 - This approach uses heuristics and may require testing/tuning for specific router models
 - Intended as a starting point that can be improved after testing with real devices
 
@@ -953,7 +943,7 @@ python test_ddwrt_manual.py --host http://192.168.1.1 --username admin --passwor
 
 **Test Generic Router Integration**:
 ```bash
-python test_generic_router_manual.py --host http://192.168.1.1 --username admin --password YOUR_PASSWORD --router-name "Bezeq Be"
+python test_generic_router_manual.py --host http://192.168.1.1 --username admin --password YOUR_PASSWORD
 ```
 
 Each test script:

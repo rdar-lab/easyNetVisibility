@@ -12,18 +12,17 @@ import router_generic
 class TestGenericRouterInit(unittest.TestCase):
     def test_init_sets_credentials(self):
         """Test that init properly sets connection parameters"""
-        router_generic.init('http://192.168.1.1', 'admin', 'test_password', False, 'TestRouter')
+        router_generic.init('http://192.168.1.1', 'admin', 'test_password', False)
         
         self.assertEqual(router_generic._router_host, 'http://192.168.1.1')
         self.assertEqual(router_generic._router_username, 'admin')
         self.assertEqual(router_generic._router_password, 'test_password')
         self.assertEqual(router_generic._validate_ssl, False)
-        self.assertEqual(router_generic._router_name, 'TestRouter')
 
 
 class TestGenericRouterDHCPLeases(unittest.TestCase):
     def setUp(self):
-        router_generic.init('http://192.168.1.1', 'admin', 'test_password', False, 'TestRouter')
+        router_generic.init('http://192.168.1.1', 'admin', 'test_password', False)
     
     @patch('router_generic._make_request')
     def test_get_dhcp_leases_table_format(self, mock_request):
@@ -55,7 +54,7 @@ class TestGenericRouterDHCPLeases(unittest.TestCase):
 
 class TestGenericRouterConnectedDevices(unittest.TestCase):
     def setUp(self):
-        router_generic.init('http://192.168.1.1', 'admin', 'test_password', False, 'TestRouter')
+        router_generic.init('http://192.168.1.1', 'admin', 'test_password', False)
     
     @patch('router_generic._make_request')
     def test_get_connected_devices_success(self, mock_request):
@@ -74,7 +73,7 @@ class TestGenericRouterConnectedDevices(unittest.TestCase):
 
 class TestGenericRouterDiscoverDevices(unittest.TestCase):
     def setUp(self):
-        router_generic.init('http://192.168.1.1', 'admin', 'test_password', False, 'TestRouter')
+        router_generic.init('http://192.168.1.1', 'admin', 'test_password', False)
     
     @patch('router_generic.get_connected_devices')
     @patch('router_generic.get_dhcp_leases')

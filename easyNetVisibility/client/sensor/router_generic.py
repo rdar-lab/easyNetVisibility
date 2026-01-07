@@ -29,10 +29,9 @@ _router_host = None
 _router_username = None
 _router_password = None
 _validate_ssl = True
-_router_name = "Generic"
 
 
-def init(host, username, password, validate_ssl=True, router_name="Generic"):
+def init(host, username, password, validate_ssl=True):
     """
     Initialize generic router connection parameters.
 
@@ -41,17 +40,15 @@ def init(host, username, password, validate_ssl=True, router_name="Generic"):
         username: Router admin username
         password: Router admin password
         validate_ssl: Whether to validate SSL certificates
-        router_name: Name of router for logging purposes
     """
-    global _router_host, _router_username, _router_password, _validate_ssl, _router_name
+    global _router_host, _router_username, _router_password, _validate_ssl
 
     _router_host = host
     _router_username = username
     _router_password = password
     _validate_ssl = validate_ssl
-    _router_name = router_name
 
-    _logger.info(f"{_router_name} router integration initialized for host: {host}")
+    _logger.info(f"Generic router integration initialized for host: {host}")
 
 
 def _make_request(endpoint, method='GET', data=None):
@@ -97,7 +94,7 @@ def _make_request(endpoint, method='GET', data=None):
         response.raise_for_status()
         return response.text
     except requests.exceptions.RequestException as e:
-        _logger.error(f"Error making {_router_name} router request to {endpoint}: {e}")
+        _logger.error(f"Error making Generic router request to {endpoint}: {e}")
         raise
 
 
@@ -112,7 +109,7 @@ def get_dhcp_leases():
         list: List of DHCP lease entries with IP, MAC, and hostname information
     """
     try:
-        _logger.info(f"Fetching DHCP leases from {_router_name} router")
+        _logger.info(f"Fetching DHCP leases from Generic router")
 
         leases = []
         
@@ -175,7 +172,7 @@ def get_dhcp_leases():
                 _logger.debug(f"Could not fetch from {endpoint}: {e}")
                 continue
 
-        _logger.info(f"Retrieved {len(leases)} DHCP leases from {_router_name} router")
+        _logger.info(f"Retrieved {len(leases)} DHCP leases from Generic router")
         return leases
 
     except Exception as e:
@@ -194,7 +191,7 @@ def get_connected_devices():
         list: List of device entries with MAC and IP information
     """
     try:
-        _logger.info(f"Fetching connected devices from {_router_name} router")
+        _logger.info(f"Fetching connected devices from Generic router")
 
         devices = []
         
@@ -249,7 +246,7 @@ def get_connected_devices():
                 _logger.debug(f"Could not fetch from {endpoint}: {e}")
                 continue
 
-        _logger.info(f"Retrieved {len(devices)} connected devices from {_router_name} router")
+        _logger.info(f"Retrieved {len(devices)} connected devices from Generic router")
         return devices
 
     except Exception as e:
@@ -268,14 +265,14 @@ def discover_devices():
     Returns:
         list: List of device dictionaries with keys: hostname, ip, mac, vendor
     """
-    _logger.info(f"Starting {_router_name} router device discovery")
+    _logger.info(f"Starting Generic router device discovery")
 
     devices = {}
 
     # Method 1: Get devices from DHCP leases
     dhcp_leases = get_dhcp_leases()
     if dhcp_leases:
-        _logger.info(f"Retrieved {len(dhcp_leases)} DHCP leases from {_router_name} router")
+        _logger.info(f"Retrieved {len(dhcp_leases)} DHCP leases from Generic router")
         for lease in dhcp_leases:
             ip = lease.get('ip', '')
             mac = lease.get('mac', '')
@@ -292,12 +289,12 @@ def discover_devices():
                     'vendor': 'Unknown'
                 }
     else:
-        _logger.info(f"No DHCP leases returned from {_router_name} router")
+        _logger.info(f"No DHCP leases returned from Generic router")
 
     # Method 2: Get connected devices
     connected_devices = get_connected_devices()
     if connected_devices:
-        _logger.info(f"Retrieved {len(connected_devices)} connected devices from {_router_name} router")
+        _logger.info(f"Retrieved {len(connected_devices)} connected devices from Generic router")
         for device in connected_devices:
             ip = device.get('ip', '')
             mac = device.get('mac', '')
@@ -314,9 +311,9 @@ def discover_devices():
                         'vendor': 'Unknown'
                     }
     else:
-        _logger.info(f"No connected devices returned from {_router_name} router")
+        _logger.info(f"No connected devices returned from Generic router")
 
     result_devices = list(devices.values())
-    _logger.info(f"{_router_name} router discovered {len(result_devices)} devices")
+    _logger.info(f"Generic router discovered {len(result_devices)} devices")
 
     return result_devices

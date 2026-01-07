@@ -125,20 +125,20 @@ def start_ddwrt_scan():
         sleep(60 * 10)  # Scan every 10 minutes
 
 
-def start_generic_router_scan(router_name):
+def start_generic_router_scan():
     """Scan generic router for devices."""
     while 1:
         try:
             if router_generic:
                 devices = router_generic.discover_devices()
-                _logger.info(f"{router_name} detected {len(devices)} devices")
+                _logger.info(f"Generic Router detected {len(devices)} devices")
                 if len(devices) > 0:
                     server_api.add_devices(devices)
             else:
                 _logger.warning("Generic router module not available")
                 continue
         except Exception as e:
-            _logger.exception(f"{router_name} scan error: " + str(e))
+            _logger.exception(f"Generic Router scan error: " + str(e))
 
         sleep(60 * 10)  # Scan every 10 minutes
 
@@ -164,7 +164,7 @@ def _initialize_router_integration(config, section_name, router_module, scan_fun
         section_name: Name of the config section (e.g., 'OpenWRT', 'DDWRT')
         router_module: The imported router module (e.g., openwrt, ddwrt)
         scan_function: The scan function to run in a thread
-        auth_type: 'api_key' for Fortigate, 'username_password' for others, 'generic' for generic routers
+        auth_type: 'api_key' for Fortigate, 'username_password' for others
         router_display_name: Display name for logging (defaults to section_name)
     
     Returns:
@@ -194,8 +194,6 @@ def _initialize_router_integration(config, section_name, router_module, scan_fun
         required_options = ['host', 'apiKey']
     elif auth_type == 'username_password':
         required_options = ['host', 'username', 'password']
-    elif auth_type == 'generic':
-        required_options = ['host', 'username', 'password', 'routerName']
     else:
         _logger.error(f"Unknown auth_type: {auth_type}")
         return False
@@ -224,12 +222,6 @@ def _initialize_router_integration(config, section_name, router_module, scan_fun
             username = config.get(section_name, 'username')
             password = config.get(section_name, 'password')
             router_module.init(host, username, password, validate_ssl)
-        elif auth_type == 'generic':
-            host = config.get(section_name, 'host')
-            username = config.get(section_name, 'username')
-            password = config.get(section_name, 'password')
-            router_name = config.get(section_name, 'routerName')
-            router_module.init(host, username, password, validate_ssl, router_name)
         
         # Start scanning thread
         scan_thread = threading.Thread(target=scan_function)
@@ -277,20 +269,7 @@ def run():
     _initialize_router_integration(config, 'Fortigate', fortigate, start_fortigate_scan, auth_type='api_key')
     _initialize_router_integration(config, 'OpenWRT', openwrt, start_openwrt_scan, auth_type='username_password')
     _initialize_router_integration(config, 'DDWRT', ddwrt, start_ddwrt_scan, auth_type='username_password', router_display_name='DD-WRT')
-
-    # Initialize generic router integrations (e.g., Bezeq, Partner)
-    # These can be added per router type with routerName config option
-    for section in config.sections():
-        if section.startswith('GenericRouter_'):
-            router_name = section.replace('GenericRouter_', '')
-            _initialize_router_integration(
-                config, 
-                section, 
-                router_generic, 
-                lambda: start_generic_router_scan(router_name),
-                auth_type='generic',
-                router_display_name=f"Generic Router ({router_name})"
-            )
+    _initialize_router_integration(config, 'GenericRouter', router_generic, start_generic_router_scan, auth_type='username_password', router_display_name='Generic Router')
 
     health_check_thread = threading.Thread(target=start_health_check)
     health_check_thread.start()
