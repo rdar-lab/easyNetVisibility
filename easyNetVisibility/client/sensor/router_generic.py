@@ -132,9 +132,14 @@ def get_dhcp_leases():
                 # Parse HTML to extract DHCP lease information
                 # Try multiple common patterns
 
-                # Pattern 1: Standard table format with hostname, MAC, IP
-                lease_pattern = r'<tr[^>]*>.*?<td[^>]*>([^<]*)</td>.*?<td[^>]*>([0-9A-Fa-f:]+)</td>.*?<td[^>]*>(\d+\.\d+\.\d+\.\d+)</td>'
-                matches = re.findall(lease_pattern, response_text, re.DOTALL)
+                # Pattern 1: Standard table format with hostname, MAC, IP (avoiding broad '.*?' to prevent backtracking)
+                lease_pattern = (
+                    r'<tr[^>]*>\s*'
+                    r'<td[^>]*>([^<]*)</td>\s*'
+                    r'<td[^>]*>([0-9A-Fa-f:]+)</td>\s*'
+                    r'<td[^>]*>(\d+\.\d+\.\d+\.\d+)</td>'
+                )
+                matches = re.findall(lease_pattern, response_text)
 
                 for match in matches:
                     hostname = match[0].strip()

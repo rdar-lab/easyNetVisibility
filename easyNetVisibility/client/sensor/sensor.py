@@ -25,19 +25,19 @@ try:
     import openwrt as openwrt_module
     openwrt = openwrt_module
 except ImportError:
-    pass
+    pass  # OpenWRT module is optional
 
 try:
     import ddwrt as ddwrt_module
     ddwrt = ddwrt_module
 except ImportError:
-    pass
+    pass  # DD-WRT module is optional
 
 try:
     import router_generic as router_generic_module
     router_generic = router_generic_module
 except ImportError:
-    pass
+    pass  # Generic router module is optional
 
 logs.setup()
 _logger = logging.getLogger('EasyNetVisibility')
@@ -82,7 +82,6 @@ def start_fortigate_scan():
                     server_api.add_devices(devices)
             else:
                 _logger.warning("Fortigate module not available")
-                continue
         except Exception as e:
             _logger.exception("Fortigate scan error: " + str(e))
 
@@ -100,7 +99,6 @@ def start_openwrt_scan():
                     server_api.add_devices(devices)
             else:
                 _logger.warning("OpenWRT module not available")
-                continue
         except Exception as e:
             _logger.exception("OpenWRT scan error: " + str(e))
 
@@ -118,7 +116,6 @@ def start_ddwrt_scan():
                     server_api.add_devices(devices)
             else:
                 _logger.warning("DD-WRT module not available")
-                continue
         except Exception as e:
             _logger.exception("DD-WRT scan error: " + str(e))
 
@@ -136,7 +133,6 @@ def start_generic_router_scan():
                     server_api.add_devices(devices)
             else:
                 _logger.warning("Generic router module not available")
-                continue
         except Exception as e:
             _logger.exception(f"Generic Router scan error: " + str(e))
 

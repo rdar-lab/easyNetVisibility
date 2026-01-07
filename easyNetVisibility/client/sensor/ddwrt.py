@@ -97,9 +97,14 @@ def get_dhcp_leases():
         # Look for patterns like: <td>hostname</td><td>MAC</td><td>IP</td><td>expires</td>
 
         # Extract lease table data using regex
-        # Pattern matches table rows with lease information
-        lease_pattern = r'<tr[^>]*>.*?<td[^>]*>([^<]+)</td>.*?<td[^>]*>([0-9A-Fa-f:]+)</td>.*?<td[^>]*>(\d+\.\d+\.\d+\.\d+)</td>'
-        matches = re.findall(lease_pattern, response_text, re.DOTALL)
+        # Pattern matches table rows with lease information without using broad '.*?' to avoid backtracking issues
+        lease_pattern = (
+            r'<tr[^>]*>\s*'
+            r'<td[^>]*>([^<]+)</td>\s*'
+            r'<td[^>]*>([0-9A-Fa-f:]+)</td>\s*'
+            r'<td[^>]*>(\d+\.\d+\.\d+\.\d+)</td>'
+        )
+        matches = re.findall(lease_pattern, response_text)
 
         for match in matches:
             hostname = match[0].strip()
