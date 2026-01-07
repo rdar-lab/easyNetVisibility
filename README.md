@@ -1116,6 +1116,95 @@ cd sensor
 python sensor.py
 ```
 
+### Dependency Management
+
+The project uses `pip-compile` (from `pip-tools`) to manage Python dependencies. This ensures reproducible builds while making it easy to update dependencies.
+
+#### Understanding the Files
+
+- **`requirements.in`**: Source file with unpinned dependencies (what you edit)
+- **`requirements.txt`**: Auto-generated file with pinned versions (committed to git)
+
+#### Installing Dependencies
+
+For normal use, just install from `requirements.txt`:
+
+```bash
+# Server
+cd easyNetVisibility/server/server_django
+pip install -r requirements.txt
+
+# Client/Sensor
+cd easyNetVisibility/client
+pip install -r requirements.txt
+```
+
+#### Updating Dependencies
+
+When you need to update dependencies to their latest versions:
+
+1. **Install pip-tools** (if not already installed):
+```bash
+pip install pip-tools
+```
+
+2. **Update server dependencies**:
+```bash
+cd easyNetVisibility/server/server_django
+pip-compile --output-file=requirements.txt requirements.in
+```
+
+3. **Update client dependencies**:
+```bash
+cd easyNetVisibility/client
+pip-compile --output-file=requirements.txt requirements.in
+```
+
+4. **Test the updates**:
+```bash
+# Install updated dependencies
+pip install -r requirements.txt
+
+# Run tests to ensure compatibility
+python manage.py test  # for server
+pytest tests/           # for client
+```
+
+5. **Commit the changes**:
+```bash
+git add requirements.txt
+git commit -m "Update dependencies"
+```
+
+#### Adding New Dependencies
+
+1. **Edit `requirements.in`** to add the new package (without version pin):
+```bash
+# Example: Add a new package
+echo "new-package" >> requirements.in
+```
+
+2. **Regenerate `requirements.txt`**:
+```bash
+pip-compile --output-file=requirements.txt requirements.in
+```
+
+3. **Install and test**:
+```bash
+pip install -r requirements.txt
+# Run tests to ensure everything works
+```
+
+#### Using pip-sync
+
+For a clean environment that matches exactly what's in `requirements.txt`:
+
+```bash
+pip-sync requirements.txt
+```
+
+This will install packages from `requirements.txt` and remove any packages not listed.
+
 ### Running Tests Locally
 
 The project includes comprehensive unit tests for both server and client components. **Test files are stored in separate `tests/` directories and are not included in production Docker images.**
