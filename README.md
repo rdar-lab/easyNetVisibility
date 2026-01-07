@@ -807,6 +807,264 @@ Look for messages like:
   - Use `validateSSL=False` only in isolated lab environments
   - Consider installing proper SSL certificates on Fortigate
 
+### Router Integrations
+
+In addition to Fortigate, the sensor supports integration with several popular consumer and enterprise routers. These integrations provide an alternative or complement to nmap-based network scanning.
+
+#### Supported Routers
+
+1. **Fortigate** - Enterprise firewall (see section above for detailed documentation)
+2. **OpenWRT** - Open-source router firmware
+3. **DD-WRT** - Popular third-party router firmware
+4. **Bezeq Be** - Israeli ISP router series
+5. **Partner Fiber** - Israeli ISP fiber router series
+
+#### General Features
+
+All router integrations provide:
+- **DHCP Lease Discovery**: Query router's DHCP server for active leases
+- **Connected Device Detection**: Identify devices from router status pages
+- **Wireless Client Detection**: Discover WiFi-connected devices (where supported)
+- **Hostname Resolution**: Extract device hostnames when available
+- **Automatic Deduplication**: Merge data from multiple sources by MAC address
+- **10-Minute Scan Interval**: Regular polling for device updates
+- **Parallel Operation**: Run alongside nmap and other router integrations
+
+#### Configuration
+
+Each router integration has its own configuration section in `config.ini`. Multiple router integrations can be enabled simultaneously.
+
+##### OpenWRT Configuration
+
+```ini
+[OpenWRT]
+# Enable OpenWRT integration
+enabled=True
+
+# OpenWRT router host
+host=http://192.168.1.1
+
+# OpenWRT admin username (usually 'root')
+username=root
+
+# OpenWRT admin password
+password=your_password_here
+
+# SSL certificate validation
+validateSSL=True
+```
+
+**Prerequisites**:
+- OpenWRT router with web interface enabled (LuCI)
+- Admin credentials
+- HTTP/HTTPS access to router from sensor
+
+**API Methods**:
+- DHCP leases from `/tmp/dhcp.leases`
+- Wireless clients from wireless status page
+- Device information from LuCI web interface
+
+##### DD-WRT Configuration
+
+```ini
+[DDWRT]
+# Enable DD-WRT integration
+enabled=True
+
+# DD-WRT router host
+host=http://192.168.1.1
+
+# DD-WRT admin username (usually 'admin')
+username=admin
+
+# DD-WRT admin password
+password=your_password_here
+
+# SSL certificate validation
+validateSSL=True
+```
+
+**Prerequisites**:
+- DD-WRT router with web interface enabled
+- Admin credentials
+- HTTP/HTTPS access to router from sensor
+
+**API Methods**:
+- DHCP leases from status pages
+- ARP table entries
+- Wireless client information
+
+##### Bezeq Be Router Configuration
+
+```ini
+[Bezeq]
+# Enable Bezeq Be router integration
+enabled=True
+
+# Bezeq router host
+host=http://192.168.1.1
+
+# Bezeq router admin username
+username=admin
+
+# Bezeq router admin password
+password=your_password_here
+
+# SSL certificate validation
+validateSSL=True
+```
+
+**Prerequisites**:
+- Bezeq Be router (Israel)
+- Admin credentials
+- HTTP/HTTPS access to router from sensor
+
+**Note**: Bezeq routers may use different web interface layouts. The integration attempts multiple common endpoints to maximize compatibility.
+
+##### Partner Fiber Router Configuration
+
+```ini
+[Partner]
+# Enable Partner Fiber router integration
+enabled=True
+
+# Partner router host
+host=http://192.168.1.1
+
+# Partner router admin username
+username=admin
+
+# Partner router admin password
+password=your_password_here
+
+# SSL certificate validation
+validateSSL=True
+```
+
+**Prerequisites**:
+- Partner Fiber router (Israel)
+- Admin credentials
+- HTTP/HTTPS access to router from sensor
+
+**Note**: Partner routers may use different web interface layouts. The integration attempts multiple common endpoints to maximize compatibility.
+
+#### Testing Router Integrations
+
+Manual testing scripts are provided to verify router connectivity and API integration before deploying the sensor. These scripts are located in `/easyNetVisibility/client/tests/manual/`.
+
+**Test Fortigate Integration**:
+```bash
+cd /path/to/easyNetVisibility/client/tests/manual
+python test_fortigate_manual.py --host https://192.168.1.1 --api-key YOUR_KEY --no-ssl-verify
+```
+
+**Test OpenWRT Integration**:
+```bash
+python test_openwrt_manual.py --host http://192.168.1.1 --username root --password YOUR_PASSWORD
+```
+
+**Test DD-WRT Integration**:
+```bash
+python test_ddwrt_manual.py --host http://192.168.1.1 --username admin --password YOUR_PASSWORD
+```
+
+**Test Bezeq Integration**:
+```bash
+python test_bezeq_manual.py --host http://192.168.1.1 --username admin --password YOUR_PASSWORD
+```
+
+**Test Partner Integration**:
+```bash
+python test_partner_manual.py --host http://192.168.1.1 --username admin --password YOUR_PASSWORD
+```
+
+Each test script:
+- Uses the same code as the production integration
+- Tests all API endpoints
+- Displays discovered devices in a formatted table
+- Reports detailed error messages if issues occur
+
+See `/easyNetVisibility/client/tests/manual/README.md` for complete testing documentation.
+
+#### Troubleshooting Router Integrations
+
+**General Issues**:
+
+1. **Connection Refused / Timeout**:
+   - Verify router IP address is correct
+   - Ensure network connectivity: `ping <router-ip>`
+   - Check if router's web interface is enabled
+   - Verify firewall rules allow access from sensor
+
+2. **Authentication Failures**:
+   - Double-check username and password
+   - Ensure admin account is not locked
+   - Check if admin access is restricted by IP address
+   - Try accessing router web interface manually
+
+3. **SSL Certificate Errors**:
+   - Use `validateSSL=False` for self-signed certificates
+   - For production: Install valid SSL certificates on router
+   - Ensure you're using `https://` in host URL for HTTPS
+
+4. **No Devices Discovered**:
+   - Verify devices are actually connected to router
+   - Check if DHCP server is enabled
+   - Try accessing router's web interface to see device list manually
+   - Check sensor logs for detailed error messages
+
+**View Sensor Logs**:
+```bash
+docker logs easy-net-visibility-sensor | grep -E "(OpenWRT|DDWRT|Bezeq|Partner)"
+```
+
+Look for messages like:
+- `<Router> integration enabled`
+- `Retrieved X DHCP leases from <Router>`
+- `<Router> discovered X devices`
+
+#### Security Considerations
+
+All router integrations follow security best practices:
+
+1. **Credential Security**:
+   - Store credentials in configuration files (not in code)
+   - Never commit passwords to version control
+   - Use strong, unique passwords for router admin accounts
+   - Consider using a dedicated read-only admin account where supported
+
+2. **Network Security**:
+   - Use SSL/TLS where available
+   - Restrict admin interface access by IP when possible
+   - Consider using a dedicated management VLAN
+   - Monitor router logs for unauthorized access attempts
+
+3. **SSL/TLS**:
+   - Use `validateSSL=True` in production with valid certificates
+   - Use `validateSSL=False` only for testing with self-signed certificates
+   - Ensure router firmware is up to date for latest security patches
+
+#### Choosing the Right Integration
+
+**When to use router integration vs nmap**:
+
+| Factor | Router Integration | nmap Scanning |
+|--------|-------------------|---------------|
+| **Speed** | Fast (< 1 second) | Moderate (depends on network size) |
+| **Accuracy** | High (from router's own records) | High (direct network probing) |
+| **Hostname Detection** | Excellent (from DHCP) | Limited (reverse DNS only) |
+| **Wireless Devices** | Excellent (from wireless status) | Good (if on same network) |
+| **Guest/Isolated Networks** | Limited (if router doesn't see them) | Good (if reachable) |
+| **Port Scanning** | Not supported | Excellent |
+| **Setup Complexity** | Medium (requires credentials) | Low (no config needed) |
+
+**Recommendations**:
+- **Best Practice**: Enable both router integration AND nmap scanning for comprehensive coverage
+- **Home Networks**: Router integration alone is often sufficient
+- **Enterprise Networks**: Use Fortigate integration for centralized visibility
+- **Complex Networks**: Use nmap for primary scanning, router integration for enrichment
+- **Multiple Segments**: Deploy sensors with appropriate router integrations per segment
+
 ## Development and Testing
 
 ### Development Environment Setup
