@@ -5,7 +5,7 @@
       "NAME": "db/db.sqlite3"
     }
   },
-  "SECRET_KEY": "dev-secret-key-change-in-production",
+  "SECRET_KEY": "dev-secret-key-for-testing-only",
   "DEBUG": "True",
   "STATIC_ROOT": "static"
 }
