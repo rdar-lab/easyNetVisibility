@@ -9,14 +9,41 @@ import network_utils
 import nmap
 import server_api
 
-# Fortigate integration is optional
+# Router integrations are optional
 fortigate = None
+openwrt = None
+ddwrt = None
+bezeq = None
+partner = None
+
 try:
     import fortigate as fortigate_module
-
     fortigate = fortigate_module
 except ImportError:
-    # Fortigate module is not installed; proceed without Fortigate integration
+    pass
+
+try:
+    import openwrt as openwrt_module
+    openwrt = openwrt_module
+except ImportError:
+    pass
+
+try:
+    import ddwrt as ddwrt_module
+    ddwrt = ddwrt_module
+except ImportError:
+    pass
+
+try:
+    import bezeq as bezeq_module
+    bezeq = bezeq_module
+except ImportError:
+    pass
+
+try:
+    import partner as partner_module
+    partner = partner_module
+except ImportError:
     pass
 
 logs.setup()
@@ -62,10 +89,81 @@ def start_fortigate_scan():
                     server_api.add_devices(devices)
             else:
                 _logger.warning("Fortigate module not available")
-                # Continue to periodically log warning if module becomes unavailable
                 continue
         except Exception as e:
             _logger.exception("Fortigate scan error: " + str(e))
+
+        sleep(60 * 10)  # Scan every 10 minutes
+
+
+def start_openwrt_scan():
+    """Scan OpenWRT router for devices."""
+    while 1:
+        try:
+            if openwrt:
+                devices = openwrt.discover_devices()
+                _logger.info(f"OpenWRT detected {len(devices)} devices")
+                if len(devices) > 0:
+                    server_api.add_devices(devices)
+            else:
+                _logger.warning("OpenWRT module not available")
+                continue
+        except Exception as e:
+            _logger.exception("OpenWRT scan error: " + str(e))
+
+        sleep(60 * 10)  # Scan every 10 minutes
+
+
+def start_ddwrt_scan():
+    """Scan DD-WRT router for devices."""
+    while 1:
+        try:
+            if ddwrt:
+                devices = ddwrt.discover_devices()
+                _logger.info(f"DD-WRT detected {len(devices)} devices")
+                if len(devices) > 0:
+                    server_api.add_devices(devices)
+            else:
+                _logger.warning("DD-WRT module not available")
+                continue
+        except Exception as e:
+            _logger.exception("DD-WRT scan error: " + str(e))
+
+        sleep(60 * 10)  # Scan every 10 minutes
+
+
+def start_bezeq_scan():
+    """Scan Bezeq router for devices."""
+    while 1:
+        try:
+            if bezeq:
+                devices = bezeq.discover_devices()
+                _logger.info(f"Bezeq detected {len(devices)} devices")
+                if len(devices) > 0:
+                    server_api.add_devices(devices)
+            else:
+                _logger.warning("Bezeq module not available")
+                continue
+        except Exception as e:
+            _logger.exception("Bezeq scan error: " + str(e))
+
+        sleep(60 * 10)  # Scan every 10 minutes
+
+
+def start_partner_scan():
+    """Scan Partner Fiber router for devices."""
+    while 1:
+        try:
+            if partner:
+                devices = partner.discover_devices()
+                _logger.info(f"Partner detected {len(devices)} devices")
+                if len(devices) > 0:
+                    server_api.add_devices(devices)
+            else:
+                _logger.warning("Partner module not available")
+                continue
+        except Exception as e:
+            _logger.exception("Partner scan error: " + str(e))
 
         sleep(60 * 10)  # Scan every 10 minutes
 
@@ -147,6 +245,158 @@ def run():
         _logger.warning("Fortigate is enabled in config but module is not available")
     else:
         _logger.info("Fortigate integration is disabled")
+
+    # Initialize OpenWRT if configured
+    openwrt_enabled = False
+    if config.has_section('OpenWRT') and config.has_option('OpenWRT', 'enabled'):
+        openwrt_enabled_param = config.get('OpenWRT', 'enabled')
+        openwrt_enabled = openwrt_enabled_param.lower() in ['true', '1', 'yes']
+
+    if openwrt_enabled and openwrt:
+        _logger.info("OpenWRT integration is enabled")
+
+        if not config.has_option('OpenWRT', 'host'):
+            _logger.error("OpenWRT enabled but 'host' option is missing in config")
+        elif not config.has_option('OpenWRT', 'username'):
+            _logger.error("OpenWRT enabled but 'username' option is missing in config")
+        elif not config.has_option('OpenWRT', 'password'):
+            _logger.error("OpenWRT enabled but 'password' option is missing in config")
+        else:
+            try:
+                openwrt_host = config.get('OpenWRT', 'host')
+                openwrt_username = config.get('OpenWRT', 'username')
+                openwrt_password = config.get('OpenWRT', 'password')
+
+                if config.has_option('OpenWRT', 'validateSSL'):
+                    validate_ssl_param = config.get('OpenWRT', 'validateSSL')
+                    validate_ssl = validate_ssl_param.lower() not in ['false', '0', 'no']
+                else:
+                    validate_ssl = True
+
+                openwrt.init(openwrt_host, openwrt_username, openwrt_password, validate_ssl)
+
+                openwrt_thread = threading.Thread(target=start_openwrt_scan)
+                openwrt_thread.start()
+            except Exception as e:
+                _logger.error(f"Failed to initialize OpenWRT integration: {e}")
+    elif openwrt_enabled and not openwrt:
+        _logger.warning("OpenWRT is enabled in config but module is not available")
+    else:
+        _logger.info("OpenWRT integration is disabled")
+
+    # Initialize DD-WRT if configured
+    ddwrt_enabled = False
+    if config.has_section('DDWRT') and config.has_option('DDWRT', 'enabled'):
+        ddwrt_enabled_param = config.get('DDWRT', 'enabled')
+        ddwrt_enabled = ddwrt_enabled_param.lower() in ['true', '1', 'yes']
+
+    if ddwrt_enabled and ddwrt:
+        _logger.info("DD-WRT integration is enabled")
+
+        if not config.has_option('DDWRT', 'host'):
+            _logger.error("DD-WRT enabled but 'host' option is missing in config")
+        elif not config.has_option('DDWRT', 'username'):
+            _logger.error("DD-WRT enabled but 'username' option is missing in config")
+        elif not config.has_option('DDWRT', 'password'):
+            _logger.error("DD-WRT enabled but 'password' option is missing in config")
+        else:
+            try:
+                ddwrt_host = config.get('DDWRT', 'host')
+                ddwrt_username = config.get('DDWRT', 'username')
+                ddwrt_password = config.get('DDWRT', 'password')
+
+                if config.has_option('DDWRT', 'validateSSL'):
+                    validate_ssl_param = config.get('DDWRT', 'validateSSL')
+                    validate_ssl = validate_ssl_param.lower() not in ['false', '0', 'no']
+                else:
+                    validate_ssl = True
+
+                ddwrt.init(ddwrt_host, ddwrt_username, ddwrt_password, validate_ssl)
+
+                ddwrt_thread = threading.Thread(target=start_ddwrt_scan)
+                ddwrt_thread.start()
+            except Exception as e:
+                _logger.error(f"Failed to initialize DD-WRT integration: {e}")
+    elif ddwrt_enabled and not ddwrt:
+        _logger.warning("DD-WRT is enabled in config but module is not available")
+    else:
+        _logger.info("DD-WRT integration is disabled")
+
+    # Initialize Bezeq if configured
+    bezeq_enabled = False
+    if config.has_section('Bezeq') and config.has_option('Bezeq', 'enabled'):
+        bezeq_enabled_param = config.get('Bezeq', 'enabled')
+        bezeq_enabled = bezeq_enabled_param.lower() in ['true', '1', 'yes']
+
+    if bezeq_enabled and bezeq:
+        _logger.info("Bezeq integration is enabled")
+
+        if not config.has_option('Bezeq', 'host'):
+            _logger.error("Bezeq enabled but 'host' option is missing in config")
+        elif not config.has_option('Bezeq', 'username'):
+            _logger.error("Bezeq enabled but 'username' option is missing in config")
+        elif not config.has_option('Bezeq', 'password'):
+            _logger.error("Bezeq enabled but 'password' option is missing in config")
+        else:
+            try:
+                bezeq_host = config.get('Bezeq', 'host')
+                bezeq_username = config.get('Bezeq', 'username')
+                bezeq_password = config.get('Bezeq', 'password')
+
+                if config.has_option('Bezeq', 'validateSSL'):
+                    validate_ssl_param = config.get('Bezeq', 'validateSSL')
+                    validate_ssl = validate_ssl_param.lower() not in ['false', '0', 'no']
+                else:
+                    validate_ssl = True
+
+                bezeq.init(bezeq_host, bezeq_username, bezeq_password, validate_ssl)
+
+                bezeq_thread = threading.Thread(target=start_bezeq_scan)
+                bezeq_thread.start()
+            except Exception as e:
+                _logger.error(f"Failed to initialize Bezeq integration: {e}")
+    elif bezeq_enabled and not bezeq:
+        _logger.warning("Bezeq is enabled in config but module is not available")
+    else:
+        _logger.info("Bezeq integration is disabled")
+
+    # Initialize Partner if configured
+    partner_enabled = False
+    if config.has_section('Partner') and config.has_option('Partner', 'enabled'):
+        partner_enabled_param = config.get('Partner', 'enabled')
+        partner_enabled = partner_enabled_param.lower() in ['true', '1', 'yes']
+
+    if partner_enabled and partner:
+        _logger.info("Partner integration is enabled")
+
+        if not config.has_option('Partner', 'host'):
+            _logger.error("Partner enabled but 'host' option is missing in config")
+        elif not config.has_option('Partner', 'username'):
+            _logger.error("Partner enabled but 'username' option is missing in config")
+        elif not config.has_option('Partner', 'password'):
+            _logger.error("Partner enabled but 'password' option is missing in config")
+        else:
+            try:
+                partner_host = config.get('Partner', 'host')
+                partner_username = config.get('Partner', 'username')
+                partner_password = config.get('Partner', 'password')
+
+                if config.has_option('Partner', 'validateSSL'):
+                    validate_ssl_param = config.get('Partner', 'validateSSL')
+                    validate_ssl = validate_ssl_param.lower() not in ['false', '0', 'no']
+                else:
+                    validate_ssl = True
+
+                partner.init(partner_host, partner_username, partner_password, validate_ssl)
+
+                partner_thread = threading.Thread(target=start_partner_scan)
+                partner_thread.start()
+            except Exception as e:
+                _logger.error(f"Failed to initialize Partner integration: {e}")
+    elif partner_enabled and not partner:
+        _logger.warning("Partner is enabled in config but module is not available")
+    else:
+        _logger.info("Partner integration is disabled")
 
     health_check_thread = threading.Thread(target=start_health_check)
     health_check_thread.start()
