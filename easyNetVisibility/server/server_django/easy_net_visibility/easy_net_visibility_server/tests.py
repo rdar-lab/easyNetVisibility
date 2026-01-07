@@ -900,8 +900,9 @@ class TestAuthenticationViews(TestCase):
         """Test that logout successfully logs out the user"""
         self.client.login(username='authuser', password='authpass')
         # Verify user is logged in
-        self.assertTrue('_auth_user_id' in self.client.session)
+        self.assertIn('_auth_user_id', self.client.session)
         # Logout with POST
         response = self.client.post('/accounts/logout/', {'next': '/'})
+        self.assertEqual(response.status_code, 302)
         # Verify user is logged out (session cleared)
         self.assertNotIn('_auth_user_id', self.client.session)
