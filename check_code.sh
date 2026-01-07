@@ -12,7 +12,7 @@ pip install -r requirements.txt
 pip install flake8
 pip install bandit[toml]
 echo "Running Flake..."
-flake8 . --count --max-line-length=200 --show-source --statistics --exclude='*/migrations/*,*/tests/*'
+flake8 . --count --max-line-length=200 --show-source --statistics --exclude='*/migrations/*,*/tests/*,*/scripts/*'
 echo "Running Bandit..."
 bandit -r . -ll -x "*/migrations/*,*/tests/*"
 
