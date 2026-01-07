@@ -816,6 +816,7 @@ In addition to Fortigate, the sensor supports integration with several popular c
 1. **Fortigate** - Enterprise firewall (see section above for detailed documentation)
 2. **OpenWRT** - Open-source router firmware
 3. **DD-WRT** - Popular third-party router firmware
+4. **Generic Router** - Heuristic approach for any router (e.g., Bezeq Be, Partner Fiber, or other ISP routers)
 
 #### General Features
 
@@ -891,6 +892,45 @@ validateSSL=True
 - DHCP leases from status pages
 - Wireless client information
 
+##### Generic Router Configuration
+
+For routers without specific API support, use the generic heuristic approach. This integration attempts to discover devices using common patterns across various router interfaces.
+
+```ini
+[GenericRouter_Bezeq]
+enabled=True
+host=http://192.168.1.1
+username=admin
+password=your_password
+validateSSL=True
+routerName=Bezeq Be
+
+[GenericRouter_Partner]
+enabled=True
+host=http://192.168.1.1
+username=admin
+password=your_password
+validateSSL=True
+routerName=Partner Fiber
+```
+
+**Configuration Notes**:
+- Section name must start with `GenericRouter_` followed by a unique identifier
+- `routerName`: Display name for logging (e.g., "Bezeq Be", "Partner Fiber")
+- This approach uses heuristics and may require testing/tuning for specific router models
+- Intended as a starting point that can be improved after testing with real devices
+
+**Prerequisites**:
+- Router with web-based management interface
+- Admin credentials
+- HTTP/HTTPS access to router from sensor
+
+**How It Works**:
+- Attempts to fetch DHCP leases from common endpoints
+- Parses HTML using common patterns found across router interfaces
+- Tries multiple endpoint variations to maximize compatibility
+- Combines data from DHCP leases and connected device lists
+
 #### Testing Router Integrations
 
 Manual testing scripts are provided to verify router connectivity and API integration before deploying the sensor. These scripts are located in `/easyNetVisibility/client/tests/manual/`.
@@ -909,6 +949,11 @@ python test_openwrt_manual.py --host http://192.168.1.1 --username root --passwo
 **Test DD-WRT Integration**:
 ```bash
 python test_ddwrt_manual.py --host http://192.168.1.1 --username admin --password YOUR_PASSWORD
+```
+
+**Test Generic Router Integration**:
+```bash
+python test_generic_router_manual.py --host http://192.168.1.1 --username admin --password YOUR_PASSWORD --router-name "Bezeq Be"
 ```
 
 Each test script:

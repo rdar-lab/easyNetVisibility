@@ -16,6 +16,7 @@ Each test script:
 1. **test_fortigate_manual.py** - Tests Fortigate firewall integration
 2. **test_openwrt_manual.py** - Tests OpenWRT router integration
 3. **test_ddwrt_manual.py** - Tests DD-WRT router integration
+4. **test_generic_router_manual.py** - Tests generic router integration (heuristic approach for any router)
 
 ## Prerequisites
 
@@ -103,20 +104,30 @@ python test_ddwrt_manual.py \
 - Admin credentials (default username is usually 'admin')
 - HTTP/HTTPS access to router
 
+### Generic Router (Heuristic Approach)
 
 ```bash
 # Basic usage
-python  \
+python test_generic_router_manual.py \
     --host http://192.168.1.1 \
     --username admin \
-    --password YOUR_PASSWORD
+    --password YOUR_PASSWORD \
+    --router-name "Bezeq Be"
 
-# With custom settings
-python  \
-    --host http://10.0.0.1 \
-    --username user \
-    --password YOUR_PASSWORD
+# For Partner router
+python test_generic_router_manual.py \
+    --host http://192.168.1.1 \
+    --username admin \
+    --password YOUR_PASSWORD \
+    --router-name "Partner Fiber"
 ```
+
+**Requirements:**
+- Any router with web-based management interface
+- Admin credentials
+- HTTP/HTTPS access to router
+
+**Note**: This uses a heuristic approach that tries common endpoints and HTML patterns. Results may vary based on router model and firmware. This is intended as a starting point that can be improved after testing with real devices.
 
 ## Command-Line Options
 
@@ -133,8 +144,11 @@ python  \
 **Fortigate:**
 - `--api-key`: API key for authentication (Required)
 
-**OpenWRT, DD-WRT:**
+**OpenWRT, DD-WRT, Generic Router:**
 - `--username`: Admin username (Optional, has defaults)
+
+**Generic Router Only:**
+- `--router-name`: Display name for the router (e.g., "Bezeq", "Partner")
 
 ## Output Format
 

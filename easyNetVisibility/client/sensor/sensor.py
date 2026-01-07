@@ -13,6 +13,7 @@ import server_api
 fortigate = None
 openwrt = None
 ddwrt = None
+router_generic = None
 
 try:
     import fortigate as fortigate_module
@@ -29,6 +30,12 @@ except ImportError:
 try:
     import ddwrt as ddwrt_module
     ddwrt = ddwrt_module
+except ImportError:
+    pass
+
+try:
+    import router_generic as router_generic_module
+    router_generic = router_generic_module
 except ImportError:
     pass
 
@@ -118,6 +125,24 @@ def start_ddwrt_scan():
         sleep(60 * 10)  # Scan every 10 minutes
 
 
+def start_generic_router_scan(router_name):
+    """Scan generic router for devices."""
+    while 1:
+        try:
+            if router_generic:
+                devices = router_generic.discover_devices()
+                _logger.info(f"{router_name} detected {len(devices)} devices")
+                if len(devices) > 0:
+                    server_api.add_devices(devices)
+            else:
+                _logger.warning("Generic router module not available")
+                continue
+        except Exception as e:
+            _logger.exception(f"{router_name} scan error: " + str(e))
+
+        sleep(60 * 10)  # Scan every 10 minutes
+
+
 def start_health_check():
     while 1:
         try:
@@ -127,6 +152,95 @@ def start_health_check():
             _logger.exception("Health check error: " + str(e))
 
         sleep(60 * 5)
+
+
+def _initialize_router_integration(config, section_name, router_module, scan_function, 
+                                    auth_type='username_password', router_display_name=None):
+    """
+    Helper function to initialize router integrations with consistent logic.
+    
+    Args:
+        config: ConfigParser object with configuration
+        section_name: Name of the config section (e.g., 'OpenWRT', 'DDWRT')
+        router_module: The imported router module (e.g., openwrt, ddwrt)
+        scan_function: The scan function to run in a thread
+        auth_type: 'api_key' for Fortigate, 'username_password' for others, 'generic' for generic routers
+        router_display_name: Display name for logging (defaults to section_name)
+    
+    Returns:
+        bool: True if initialization succeeded, False otherwise
+    """
+    if router_display_name is None:
+        router_display_name = section_name
+    
+    # Check if enabled
+    enabled = False
+    if config.has_section(section_name) and config.has_option(section_name, 'enabled'):
+        enabled_param = config.get(section_name, 'enabled')
+        enabled = enabled_param.lower() in ['true', '1', 'yes']
+    
+    if not enabled:
+        _logger.info(f"{router_display_name} integration is disabled")
+        return False
+    
+    if not router_module:
+        _logger.warning(f"{router_display_name} is enabled in config but module is not available")
+        return False
+    
+    _logger.info(f"{router_display_name} integration is enabled")
+    
+    # Validate required options based on auth type
+    if auth_type == 'api_key':
+        required_options = ['host', 'apiKey']
+    elif auth_type == 'username_password':
+        required_options = ['host', 'username', 'password']
+    elif auth_type == 'generic':
+        required_options = ['host', 'username', 'password', 'routerName']
+    else:
+        _logger.error(f"Unknown auth_type: {auth_type}")
+        return False
+    
+    # Check all required options exist
+    for option in required_options:
+        if not config.has_option(section_name, option):
+            _logger.error(f"{router_display_name} enabled but '{option}' option is missing in config")
+            return False
+    
+    # Initialize the router module
+    try:
+        # Get validateSSL option (common to all)
+        validate_ssl = True
+        if config.has_option(section_name, 'validateSSL'):
+            validate_ssl_param = config.get(section_name, 'validateSSL')
+            validate_ssl = validate_ssl_param.lower() not in ['false', '0', 'no']
+        
+        # Initialize based on auth type
+        if auth_type == 'api_key':
+            host = config.get(section_name, 'host')
+            api_key = config.get(section_name, 'apiKey')
+            router_module.init(host, api_key, validate_ssl)
+        elif auth_type == 'username_password':
+            host = config.get(section_name, 'host')
+            username = config.get(section_name, 'username')
+            password = config.get(section_name, 'password')
+            router_module.init(host, username, password, validate_ssl)
+        elif auth_type == 'generic':
+            host = config.get(section_name, 'host')
+            username = config.get(section_name, 'username')
+            password = config.get(section_name, 'password')
+            router_name = config.get(section_name, 'routerName')
+            router_module.init(host, username, password, validate_ssl, router_name)
+        
+        # Start scanning thread
+        scan_thread = threading.Thread(target=scan_function)
+        scan_thread.start()
+        
+        _logger.info(f"{router_display_name} integration initialized successfully")
+        return True
+        
+    except Exception as e:
+        _logger.error(f"Failed to initialize {router_display_name} integration: {e}")
+        return False
 
 
 def run():
@@ -159,118 +273,24 @@ def run():
     interface = config.get('General', 'interface')
     network_utils.init(interface)
 
-    # Initialize Fortigate if configured
-    fortigate_enabled = False
-    if config.has_section('Fortigate') and config.has_option('Fortigate', 'enabled'):
-        fortigate_enabled_param = config.get('Fortigate', 'enabled')
-        fortigate_enabled = fortigate_enabled_param.lower() in ['true', '1', 'yes']
+    # Initialize router integrations using helper function
+    _initialize_router_integration(config, 'Fortigate', fortigate, start_fortigate_scan, auth_type='api_key')
+    _initialize_router_integration(config, 'OpenWRT', openwrt, start_openwrt_scan, auth_type='username_password')
+    _initialize_router_integration(config, 'DDWRT', ddwrt, start_ddwrt_scan, auth_type='username_password', router_display_name='DD-WRT')
 
-    if fortigate_enabled and fortigate:
-        _logger.info("Fortigate integration is enabled")
-
-        # Check for required configuration options
-        if not config.has_option('Fortigate', 'host'):
-            _logger.error("Fortigate enabled but 'host' option is missing in config")
-        elif not config.has_option('Fortigate', 'apiKey'):
-            _logger.error("Fortigate enabled but 'apiKey' option is missing in config")
-        else:
-            try:
-                fortigate_host = config.get('Fortigate', 'host')
-                fortigate_api_key = config.get('Fortigate', 'apiKey')
-
-                if config.has_option('Fortigate', 'validateSSL'):
-                    validate_ssl_param = config.get('Fortigate', 'validateSSL')
-                    validate_ssl = validate_ssl_param.lower() not in ['false', '0', 'no']
-                else:
-                    validate_ssl = True
-
-                fortigate.init(fortigate_host, fortigate_api_key, validate_ssl)
-
-                # Start Fortigate scanning thread
-                fortigate_thread = threading.Thread(target=start_fortigate_scan)
-                fortigate_thread.start()
-            except Exception as e:
-                _logger.error(f"Failed to initialize Fortigate integration: {e}")
-    elif fortigate_enabled and not fortigate:
-        _logger.warning("Fortigate is enabled in config but module is not available")
-    else:
-        _logger.info("Fortigate integration is disabled")
-
-    # Initialize OpenWRT if configured
-    openwrt_enabled = False
-    if config.has_section('OpenWRT') and config.has_option('OpenWRT', 'enabled'):
-        openwrt_enabled_param = config.get('OpenWRT', 'enabled')
-        openwrt_enabled = openwrt_enabled_param.lower() in ['true', '1', 'yes']
-
-    if openwrt_enabled and openwrt:
-        _logger.info("OpenWRT integration is enabled")
-
-        if not config.has_option('OpenWRT', 'host'):
-            _logger.error("OpenWRT enabled but 'host' option is missing in config")
-        elif not config.has_option('OpenWRT', 'username'):
-            _logger.error("OpenWRT enabled but 'username' option is missing in config")
-        elif not config.has_option('OpenWRT', 'password'):
-            _logger.error("OpenWRT enabled but 'password' option is missing in config")
-        else:
-            try:
-                openwrt_host = config.get('OpenWRT', 'host')
-                openwrt_username = config.get('OpenWRT', 'username')
-                openwrt_password = config.get('OpenWRT', 'password')
-
-                if config.has_option('OpenWRT', 'validateSSL'):
-                    validate_ssl_param = config.get('OpenWRT', 'validateSSL')
-                    validate_ssl = validate_ssl_param.lower() not in ['false', '0', 'no']
-                else:
-                    validate_ssl = True
-
-                openwrt.init(openwrt_host, openwrt_username, openwrt_password, validate_ssl)
-
-                openwrt_thread = threading.Thread(target=start_openwrt_scan)
-                openwrt_thread.start()
-            except Exception as e:
-                _logger.error(f"Failed to initialize OpenWRT integration: {e}")
-    elif openwrt_enabled and not openwrt:
-        _logger.warning("OpenWRT is enabled in config but module is not available")
-    else:
-        _logger.info("OpenWRT integration is disabled")
-
-    # Initialize DD-WRT if configured
-    ddwrt_enabled = False
-    if config.has_section('DDWRT') and config.has_option('DDWRT', 'enabled'):
-        ddwrt_enabled_param = config.get('DDWRT', 'enabled')
-        ddwrt_enabled = ddwrt_enabled_param.lower() in ['true', '1', 'yes']
-
-    if ddwrt_enabled and ddwrt:
-        _logger.info("DD-WRT integration is enabled")
-
-        if not config.has_option('DDWRT', 'host'):
-            _logger.error("DD-WRT enabled but 'host' option is missing in config")
-        elif not config.has_option('DDWRT', 'username'):
-            _logger.error("DD-WRT enabled but 'username' option is missing in config")
-        elif not config.has_option('DDWRT', 'password'):
-            _logger.error("DD-WRT enabled but 'password' option is missing in config")
-        else:
-            try:
-                ddwrt_host = config.get('DDWRT', 'host')
-                ddwrt_username = config.get('DDWRT', 'username')
-                ddwrt_password = config.get('DDWRT', 'password')
-
-                if config.has_option('DDWRT', 'validateSSL'):
-                    validate_ssl_param = config.get('DDWRT', 'validateSSL')
-                    validate_ssl = validate_ssl_param.lower() not in ['false', '0', 'no']
-                else:
-                    validate_ssl = True
-
-                ddwrt.init(ddwrt_host, ddwrt_username, ddwrt_password, validate_ssl)
-
-                ddwrt_thread = threading.Thread(target=start_ddwrt_scan)
-                ddwrt_thread.start()
-            except Exception as e:
-                _logger.error(f"Failed to initialize DD-WRT integration: {e}")
-    elif ddwrt_enabled and not ddwrt:
-        _logger.warning("DD-WRT is enabled in config but module is not available")
-    else:
-        _logger.info("DD-WRT integration is disabled")
+    # Initialize generic router integrations (e.g., Bezeq, Partner)
+    # These can be added per router type with routerName config option
+    for section in config.sections():
+        if section.startswith('GenericRouter_'):
+            router_name = section.replace('GenericRouter_', '')
+            _initialize_router_integration(
+                config, 
+                section, 
+                router_generic, 
+                lambda: start_generic_router_scan(router_name),
+                auth_type='generic',
+                router_display_name=f"Generic Router ({router_name})"
+            )
 
     health_check_thread = threading.Thread(target=start_health_check)
     health_check_thread.start()
