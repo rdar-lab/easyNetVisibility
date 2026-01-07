@@ -32,7 +32,13 @@
         <li><a href="/status">Status</a></li>
     </ul>
     <ul class="nav navbar-nav navbar-right">
-        <li ><a href="/accounts/logout/?next=/">Logout</a></li>
+        <li>
+            <form method="post" action="/accounts/logout/">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="/">
+                <button type="submit">Logout</button>
+            </form>
+        </li>
     </ul>
   </div>
 </nav>

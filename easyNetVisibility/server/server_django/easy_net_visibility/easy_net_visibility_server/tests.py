@@ -871,3 +871,38 @@ class TestAddPortsApi(TestCase):
         data = response.json()
         self.assertEqual(data['success_count'], 0)
         self.assertEqual(len(data['errors']), 2)
+
+
+class TestAuthenticationViews(TestCase):
+    """Test authentication-related functionality"""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='authuser', password='authpass')
+        self.client = Client()
+
+    def test_logout_post_redirects_to_next_parameter(self):
+        """Test that logout with POST request redirects to the next parameter"""
+        self.client.login(username='authuser', password='authpass')
+        response = self.client.post('/accounts/logout/', {'next': '/'}, follow=False)
+        # Should redirect to login page with next parameter
+        self.assertEqual(response.status_code, 302)
+        # Check user is logged out
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    def test_logout_get_not_allowed(self):
+        """Test that logout with GET request returns 405 Method Not Allowed"""
+        self.client.login(username='authuser', password='authpass')
+        response = self.client.get('/accounts/logout/?next=/', follow=False)
+        # Django's built-in logout view requires POST
+        self.assertEqual(response.status_code, 405)
+
+    def test_logout_post_success(self):
+        """Test that logout successfully logs out the user"""
+        self.client.login(username='authuser', password='authpass')
+        # Verify user is logged in
+        self.assertIn('_auth_user_id', self.client.session)
+        # Logout with POST
+        response = self.client.post('/accounts/logout/', {'next': '/'})
+        self.assertEqual(response.status_code, 302)
+        # Verify user is logged out (session cleared)
+        self.assertNotIn('_auth_user_id', self.client.session)
