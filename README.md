@@ -1208,132 +1208,39 @@ This will install packages from `requirements.txt` and remove any packages not l
 
 ### Running Tests Locally
 
-The project includes comprehensive unit tests for both server and client components. **Test files are stored in separate `tests/` directories and are not included in production Docker images.**
+The project includes comprehensive unit tests for both server and client components. Test files are stored in separate `tests/` directories and are not included in production Docker images.
 
 #### Server Tests (Django)
 
-**Run all server tests**:
 ```bash
+# Run all server tests
 cd easyNetVisibility/server/server_django/easy_net_visibility
 python manage.py test
-```
 
-**Run specific test modules**:
-```bash
-# Validator tests
-python manage.py test tests.test_validators
-
-# Sensor model tests
-python manage.py test tests.test_sensor_model
-
-# API view tests
-python manage.py test easy_net_visibility_server.tests
-```
-
-**Run with verbose output**:
-```bash
+# Run with verbose output
 python manage.py test --verbosity=2
-```
 
-**Run specific test class or method**:
-```bash
-# Run specific test class
-python manage.py test tests.test_validators.ValidatorTestCase
-
-# Run specific test method
-python manage.py test tests.test_validators.ValidatorTestCase.test_mac_address_valid
+# Run specific test modules
+python manage.py test tests.test_validators
 ```
 
 #### Client Tests (Pytest)
 
-**Run all client tests**:
 ```bash
+# Run all client tests
 cd easyNetVisibility/client
 pytest tests/ -v
-```
 
-**Run specific test files**:
-```bash
-# Network utilities tests
-pytest tests/test_network_utils.py -v
-
-# Server API client tests
-pytest tests/test_server_api.py -v
-
-# Nmap integration tests
-pytest tests/test_nmap.py -v
-
-# Fortigate integration tests
-pytest tests/test_fortigate.py -v
-```
-
-**Run with coverage report**:
-```bash
+# Run with coverage report
 pytest tests/ --cov=sensor --cov-report=html
-```
 
-**Run specific test function**:
-```bash
-pytest tests/test_network_utils.py::test_get_mac_address -v
+# Run specific test files
+pytest tests/test_network_utils.py -v
 ```
 
 ### Continuous Integration
 
-Tests are automatically run via GitHub Actions on every push and pull request.
-
-**CI Pipeline**:
-1. **Server Tests**: 152 Django unit tests
-2. **Client Tests**: 63 Pytest tests (42 core + 21 Fortigate)
-3. **Total Coverage**: 215 automated tests
-
-**View CI Results**:
-- Navigate to the **Actions** tab in the GitHub repository
-- Click on any workflow run to see detailed test results
-- Failed tests will show detailed error messages and stack traces
-
-### Test Coverage
-
-#### Server Components (152 tests)
-- **Models**: Device, Port, Sensor
-  - Field validation (MAC, IP, hostname)
-  - Model methods (online status, name resolution)
-  - Database constraints
-- **API Views**: 
-  - CSRF token handling
-  - Device CRUD operations
-  - Port CRUD operations
-  - Batch operations
-  - Authentication and permissions
-- **Validators**: 
-  - MAC address formats
-  - IP address validation
-  - Hostname validation
-  - URL validation
-- **Error Handling**: Edge cases and malformed data
-
-#### Client Components (63 tests)
-- **Network Utilities** (test_network_utils.py):
-  - IP address detection
-  - MAC address detection
-  - Network interface handling
-  - Gateway detection
-- **Server API Client** (test_server_api.py):
-  - Authentication
-  - CSRF token handling
-  - HTTP operations (GET, POST, DELETE)
-  - Error handling
-- **Nmap Integration** (test_nmap.py):
-  - Ping sweep scanning
-  - Port scanning
-  - XML output parsing
-  - Device and port discovery
-- **Fortigate Integration** (test_fortigate.py):
-  - Assets API queries
-  - ARP table queries
-  - DHCP table queries
-  - Device normalization
-  - Fallback mechanisms
-  - Error handling
+Tests are automatically run via GitHub Actions on every push and pull request. Navigate to the **Actions** tab in the GitHub repository to view test results and detailed error messages for any failures.
 
 ### Code Quality Tools
 
