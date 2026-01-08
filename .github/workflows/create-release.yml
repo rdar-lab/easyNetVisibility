@@ -40,7 +40,7 @@ jobs:
           VERSION_CLEAN=${VERSION#v}
 
           # Validate version format
-          PATTERN='^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9][a-zA-Z0-9]*)?$'
+          PATTERN='^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z][a-zA-Z0-9]*)?$'
           if ! [[ "$VERSION_CLEAN" =~ $PATTERN ]]; then
             echo "Error: Invalid version format."
             echo "Expected: 1.0.0 or 1.0.0-alpha1"
@@ -58,7 +58,7 @@ jobs:
 
           # Validate release type matches version format
           RELEASE_TYPE="${{ github.event.inputs.release_type }}"
-          if [[ "$VERSION_CLEAN" =~ -[a-zA-Z0-9] ]]; then
+          if [[ "$VERSION_CLEAN" =~ -[a-zA-Z] ]]; then
             # Version has suffix (e.g., -alpha, -beta, -rc1)
             if [ "$RELEASE_TYPE" = "stable" ]; then
               echo "Warning: Version contains suffix but type is 'stable'."
@@ -130,7 +130,7 @@ jobs:
             echo ""
           } >> $GITHUB_STEP_SUMMARY
 
-          if [[ "$VERSION" =~ -[a-zA-Z0-9] ]] || \
+          if [[ "$VERSION" =~ -[a-zA-Z] ]] || \
              [ "$RELEASE_TYPE" = "pre-release" ]; then
             {
               echo "### Docker Images (Pre-release):"
