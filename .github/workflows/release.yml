@@ -11,6 +11,12 @@ name: Release
         description: 'Tag to release (e.g., v1.0.0)'
         required: true
         type: string
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g., v1.0.0)'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -25,7 +31,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
+          ref: ${{ (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call') && inputs.tag || github.ref }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -39,9 +45,9 @@ jobs:
       - name: Validate and extract version from tag
         id: get_version
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            VERSION="${{ github.event.inputs.tag }}"
-            # Validate tag format for workflow_dispatch
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "${{ github.event_name }}" = "workflow_call" ]; then
+            VERSION="${{ inputs.tag }}"
+            # Validate tag format for workflow_dispatch/workflow_call
             if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z][a-zA-Z0-9]*)?$ ]]; then
               echo "Error: Invalid tag format. Expected format: v1.0.0 or v1.0.0-alpha1"
               exit 1
@@ -93,14 +99,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
+          ref: ${{ (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call') && inputs.tag || github.ref }}
           fetch-depth: 0  # Fetch all history for changelog generation
 
       - name: Extract version from tag
         id: get_version
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            VERSION="${{ github.event.inputs.tag }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "${{ github.event_name }}" = "workflow_call" ]; then
+            VERSION="${{ inputs.tag }}"
           else
             VERSION=${GITHUB_REF#refs/tags/}
           fi
