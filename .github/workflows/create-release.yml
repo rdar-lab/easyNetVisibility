@@ -61,8 +61,10 @@ jobs:
           if [[ "$VERSION_CLEAN" =~ -[a-zA-Z][a-zA-Z0-9]* ]]; then
             # Version has suffix (e.g., -alpha, -beta, -rc1)
             if [ "$RELEASE_TYPE" = "stable" ]; then
-              echo "Warning: Version contains suffix but type is 'stable'."
-              echo "Treating this as a pre-release due to version format."
+              echo "Error: Version has pre-release suffix but type is 'stable'."
+              echo "Version: $VERSION_CLEAN"
+              echo "Either remove the suffix or select 'pre-release' type."
+              exit 1
             fi
           else
             # Version has no suffix
