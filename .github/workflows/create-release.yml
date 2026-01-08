@@ -21,9 +21,12 @@ permissions:
   contents: write
 
 jobs:
-  create-tag-and-release:
-    name: Create Tag and Trigger Release
+  create-tag:
+    name: Create and Push Tag
     runs-on: ubuntu-latest
+    outputs:
+      tag_name: ${{ steps.validate.outputs.tag_name }}
+      version: ${{ steps.validate.outputs.version }}
 
     steps:
       - name: Checkout code
@@ -102,13 +105,6 @@ jobs:
 
           echo "✅ Tag $TAG_NAME created and pushed successfully!"
 
-      - name: Wait for release workflow
-        run: |
-          echo "⏳ Waiting for release workflow to start..."
-          sleep 10
-          echo "✅ Release workflow should now be running."
-          echo "Check the Actions tab to monitor progress."
-
       - name: Summary
         run: |
           TAG_NAME="${{ steps.validate.outputs.tag_name }}"
@@ -155,3 +151,11 @@ jobs:
               echo "- \`${SENSOR_IMG}:latest\`"
             } >> $GITHUB_STEP_SUMMARY
           fi
+
+  trigger-release:
+    name: Trigger Release Workflow
+    needs: create-tag
+    uses: ./.github/workflows/release.yml
+    secrets: inherit
+    with:
+      tag: ${{ needs.create-tag.outputs.tag_name }}
