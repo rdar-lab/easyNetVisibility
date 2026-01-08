@@ -2,6 +2,15 @@
 
 This document provides instructions for testing the automated release workflow.
 
+## Overview
+
+There are two workflows for creating releases:
+
+1. **Create Release** (Recommended): User-friendly workflow that creates tags and triggers releases directly from GitHub UI
+2. **Release**: Lower-level workflow that builds and publishes Docker images when a tag is pushed
+
+Most users should use the **Create Release** workflow, which handles everything automatically.
+
 ## Prerequisites
 
 Before testing the release workflow, ensure:
@@ -52,23 +61,43 @@ The workflow automatically detects version types:
 
 ## Manual Testing (Recommended First Test)
 
-The safest way to test is using the manual workflow dispatch:
+The easiest and safest way to test is using the **Create Release** workflow:
+
+### Using the Create Release Workflow (Recommended)
 
 1. Navigate to the [Actions tab](https://github.com/rdar-lab/easyNetVisibility/actions)
-2. Select the **Release** workflow from the left sidebar
+2. Select the **Create Release** workflow from the left sidebar
 3. Click **Run workflow** button (on the right)
-4. Enter a test version tag: `v0.0.1-test`
+4. Fill in the form:
+   - **Version number**: `0.0.1-test` (without 'v' prefix)
+   - **Release type**: Select `pre-release`
 5. Click **Run workflow** to start
 
 ### What to Expect
 
-The workflow will:
-1. Build Docker images for server and sensor from the specified tag
+The **Create Release** workflow will:
+1. Validate the version format
+2. Check that the tag doesn't already exist
+3. Create and push the tag `v0.0.1-test`
+4. Automatically trigger the **Release** workflow
+
+The **Release** workflow will then:
+1. Build Docker images for server and sensor from the tag
 2. Push images to Docker Hub with tags:
    - `rdxmaster/easy-net-visibility-server-django:0.0.1-test`
    - `rdxmaster/easy-net-visibility-sensor:0.0.1-test`
    - **Note:** Pre-release versions (containing `-test`, `-alpha`, `-beta`, `-rc`) will NOT update the `latest` tag
 3. Create a GitHub Release for tag `v0.0.1-test` marked as pre-release
+
+### Alternative: Using the Release Workflow Directly
+
+You can also trigger the release workflow directly if the tag already exists:
+
+1. Navigate to the [Actions tab](https://github.com/rdar-lab/easyNetVisibility/actions)
+2. Select the **Release** workflow from the left sidebar
+3. Click **Run workflow** button (on the right)
+4. Enter the tag with 'v' prefix: `v0.0.1-test`
+5. Click **Run workflow** to start
 
 ### Verify the Results
 
@@ -99,9 +128,9 @@ The workflow will:
    docker run --rm rdxmaster/easy-net-visibility-sensor:0.0.1-test --help
    ```
 
-## Testing with Git Tags
+## Testing with Git Tags (Alternative Method)
 
-Once manual testing is successful, test the automatic trigger:
+If you want to test the automatic tag-based trigger (instead of using the Create Release workflow), you can create and push tags manually:
 
 1. **Create and push a test tag**:
    ```bash
@@ -118,6 +147,8 @@ Once manual testing is successful, test the automatic trigger:
    - Check GitHub Release for `v0.0.2-test`
    - Check Docker Hub for `0.0.2-test` tags
    - Test pulling and running images
+
+**Note:** This method is less convenient than using the Create Release workflow, but it tests the automatic tag-based trigger mechanism.
 
 ## Creating a Real Release
 
