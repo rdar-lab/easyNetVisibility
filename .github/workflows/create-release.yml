@@ -30,6 +30,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Fetch all history to create tag
+          token: ${{ secrets.PAT_TOKEN || github.token }}  # Use PAT to trigger Release workflow
 
       - name: Validate version format
         id: validate

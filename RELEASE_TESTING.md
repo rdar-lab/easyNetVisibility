@@ -18,6 +18,7 @@ Before testing the release workflow, ensure:
 1. **GitHub Secrets are configured**:
    - `DOCKERHUB_USERNAME`: Set to `rdxmaster` (or your Docker Hub username)
    - `DOCKERHUB_TOKEN`: Docker Hub access token with read/write permissions
+   - `PAT_TOKEN`: Personal Access Token with `repo` and `workflow` scopes (required for triggering Release workflow)
 
 2. **Repository permissions**:
    - Write access to the repository
@@ -41,6 +42,40 @@ If the secrets are not yet configured:
    - Name: `DOCKERHUB_TOKEN`
    - Value: Paste the token
    - Click **Add secret**
+
+## Setting Up Personal Access Token (PAT)
+
+The `PAT_TOKEN` is required for the Create Release workflow to trigger the Release workflow automatically. This is a GitHub Actions limitation - workflows using the default `GITHUB_TOKEN` cannot trigger other workflows.
+
+### Creating a Personal Access Token:
+
+1. Log in to GitHub
+2. Go to **Settings** → **Developer settings** → **Personal access tokens** → **Tokens (classic)**
+3. Click **Generate new token** → **Generate new token (classic)**
+4. Configure the token:
+   - **Note**: `easyNetVisibility Release Automation`
+   - **Expiration**: Choose an appropriate expiration (e.g., 90 days, 1 year)
+   - **Select scopes**:
+     - ✅ `repo` (Full control of private repositories)
+     - ✅ `workflow` (Update GitHub Action workflows)
+5. Click **Generate token**
+6. **Copy the token immediately** (you won't be able to see it again)
+
+### Adding PAT to Repository:
+
+1. Go to repository **Settings** → **Secrets and variables** → **Actions**
+2. Click **New repository secret**
+3. Name: `PAT_TOKEN`
+4. Value: Paste the Personal Access Token
+5. Click **Add secret**
+
+**Security Note**: 
+- Store the PAT securely as a GitHub secret
+- Never commit the PAT to the repository
+- Set an appropriate expiration and renew before it expires
+- Consider using a GitHub App token instead for better security and fine-grained permissions
+
+**Alternative (Optional)**: If `PAT_TOKEN` is not configured, the workflow will fall back to using the default `GITHUB_TOKEN`, but the Release workflow will need to be triggered manually after the tag is created.
 
 ## Version Tag Behavior
 

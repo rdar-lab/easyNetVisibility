@@ -1387,6 +1387,12 @@ Easy Net Visibility uses automated releases via GitHub Actions. When a new versi
 
 **For Maintainers**: You can create a new release directly from GitHub without cloning the repository locally.
 
+**Prerequisites**: Ensure the following GitHub secrets are configured:
+- `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` for Docker Hub authentication
+- `PAT_TOKEN` (Personal Access Token with `repo` and `workflow` scopes) to trigger the Release workflow automatically
+
+See [RELEASE_TESTING.md](RELEASE_TESTING.md) for detailed setup instructions.
+
 #### Method 1: GitHub UI (Recommended)
 
 1. **Navigate to the Actions tab**:
