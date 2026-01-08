@@ -1,0 +1,156 @@
+---
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 1.0.0 or 1.0.0-alpha)'
+        required: true
+        type: string
+      release_type:
+        description: 'Release type'
+        required: true
+        type: choice
+        options:
+          - stable
+          - pre-release
+        default: stable
+
+permissions:
+  contents: write
+
+jobs:
+  create-tag-and-release:
+    name: Create Tag and Trigger Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history to create tag
+
+      - name: Validate version format
+        id: validate
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+
+          # Remove 'v' prefix if present
+          VERSION_CLEAN=${VERSION#v}
+
+          # Validate version format
+          PATTERN='^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z][a-zA-Z0-9]*)?$'
+          if ! [[ "$VERSION_CLEAN" =~ $PATTERN ]]; then
+            echo "Error: Invalid version format."
+            echo "Expected: 1.0.0 or 1.0.0-alpha1"
+            exit 1
+          fi
+
+          # Add 'v' prefix for git tag
+          TAG_NAME="v${VERSION_CLEAN}"
+
+          # Check if tag already exists
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Error: Tag $TAG_NAME already exists!"
+            exit 1
+          fi
+
+          # Validate release type matches version format
+          RELEASE_TYPE="${{ github.event.inputs.release_type }}"
+          if [[ "$VERSION_CLEAN" =~ -[a-zA-Z][a-zA-Z0-9]* ]]; then
+            # Version has suffix (e.g., -alpha, -beta, -rc1)
+            if [ "$RELEASE_TYPE" = "stable" ]; then
+              echo "Error: Version has pre-release suffix but type is 'stable'."
+              echo "Version: $VERSION_CLEAN"
+              echo "Either remove the suffix or select 'pre-release' type."
+              exit 1
+            fi
+          else
+            # Version has no suffix
+            if [ "$RELEASE_TYPE" = "pre-release" ]; then
+              echo "Error: Cannot create pre-release without version suffix"
+              echo "Expected suffix: -alpha, -beta, -rc1, etc."
+              exit 1
+            fi
+          fi
+
+          echo "version=${VERSION_CLEAN}" >> $GITHUB_OUTPUT
+          echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
+          echo "Validated version: ${TAG_NAME}"
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create and push tag
+        run: |
+          TAG_NAME="${{ steps.validate.outputs.tag_name }}"
+          VERSION="${{ steps.validate.outputs.version }}"
+          RELEASE_TYPE="${{ github.event.inputs.release_type }}"
+
+          # Create annotated tag with multi-line message
+          git tag -a "$TAG_NAME" -m "Release $TAG_NAME" \
+            -m "" \
+            -m "Release type: $RELEASE_TYPE" \
+            -m "Created via GitHub Actions workflow"
+
+          # Push tag
+          git push origin "$TAG_NAME"
+
+          echo "✅ Tag $TAG_NAME created and pushed successfully!"
+
+      - name: Wait for release workflow
+        run: |
+          echo "⏳ Waiting for release workflow to start..."
+          sleep 10
+          echo "✅ Release workflow should now be running."
+          echo "Check the Actions tab to monitor progress."
+
+      - name: Summary
+        run: |
+          TAG_NAME="${{ steps.validate.outputs.tag_name }}"
+          VERSION="${{ steps.validate.outputs.version }}"
+          RELEASE_TYPE="${{ github.event.inputs.release_type }}"
+          REPO_URL="${{ github.server_url }}/${{ github.repository }}"
+
+          {
+            echo "## Release Tag Created Successfully! 🎉"
+            echo ""
+            echo "### Version: $TAG_NAME"
+            echo "**Type:** $RELEASE_TYPE"
+            echo ""
+            echo "### Next Steps:"
+            echo "1. The **Release** workflow has been triggered"
+            echo "2. Docker images will be built and pushed"
+            echo "3. A GitHub release will be created"
+            echo ""
+            echo "### Monitor Progress:"
+            echo "- [View Actions]($REPO_URL/actions)"
+            echo "- [View Releases]($REPO_URL/releases)"
+            echo ""
+          } >> $GITHUB_STEP_SUMMARY
+
+          if [[ "$VERSION" =~ -[a-zA-Z][a-zA-Z0-9]* ]] || \
+             [ "$RELEASE_TYPE" = "pre-release" ]; then
+            {
+              echo "### Docker Images (Pre-release):"
+              SERVER_IMG="rdxmaster/easy-net-visibility-server-django"
+              SENSOR_IMG="rdxmaster/easy-net-visibility-sensor"
+              echo "- \`${SERVER_IMG}:${VERSION}\`"
+              echo "- \`${SENSOR_IMG}:${VERSION}\`"
+              echo ""
+              echo "⚠️ **Note:** Pre-releases do NOT update \`latest\` tag"
+            } >> $GITHUB_STEP_SUMMARY
+          else
+            {
+              echo "### Docker Images (Stable Release):"
+              SERVER_IMG="rdxmaster/easy-net-visibility-server-django"
+              SENSOR_IMG="rdxmaster/easy-net-visibility-sensor"
+              echo "- \`${SERVER_IMG}:${VERSION}\`"
+              echo "- \`${SERVER_IMG}:latest\`"
+              echo "- \`${SENSOR_IMG}:${VERSION}\`"
+              echo "- \`${SENSOR_IMG}:latest\`"
+            } >> $GITHUB_STEP_SUMMARY
+          fi

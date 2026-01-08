@@ -1385,7 +1385,39 @@ Easy Net Visibility uses automated releases via GitHub Actions. When a new versi
 
 ### Creating a New Release
 
-**For Maintainers**: To create a new release, follow these steps:
+**For Maintainers**: You can create a new release directly from GitHub without cloning the repository locally.
+
+#### Method 1: GitHub UI (Recommended)
+
+1. **Navigate to the Actions tab**:
+   - Go to the [Actions tab](https://github.com/rdar-lab/easyNetVisibility/actions)
+   - Select the **"Create Release"** workflow from the left sidebar
+
+2. **Click "Run workflow"**:
+   - Click the **"Run workflow"** button (on the right)
+   - Fill in the form:
+     - **Version number**: Enter version without 'v' prefix (e.g., `1.0.0` or `1.0.0-alpha`)
+     - **Release type**: Select `stable` or `pre-release`
+   - Click **"Run workflow"** to start
+
+3. **Automated workflow will**:
+   - Create and push the version tag (e.g., `v1.0.0`)
+   - Trigger the release workflow automatically
+   - Build Docker images for both server and sensor
+   - Tag images with version number (e.g., `1.0.0`) and `latest` (for stable releases)
+   - Push images to Docker Hub
+   - Create a GitHub Release with changelog
+
+4. **Monitor progress**:
+   - Watch the workflow run in the Actions tab
+   - Check [GitHub Releases](https://github.com/rdar-lab/easyNetVisibility/releases) when complete
+   - Verify images on Docker Hub:
+     - `rdxmaster/easy-net-visibility-server-django:1.0.0`
+     - `rdxmaster/easy-net-visibility-sensor:1.0.0`
+
+#### Method 2: Command Line (Traditional)
+
+If you prefer using git locally:
 
 1. **Ensure all changes are committed and tests pass**:
    ```bash
@@ -1425,15 +1457,12 @@ The release workflow requires the following secrets to be configured in the GitH
 3. Create a token with read/write permissions
 4. Add the token to GitHub repository secrets
 
-### Manual Release Trigger
+### Release Methods Comparison
 
-If needed, releases can also be triggered manually via GitHub Actions:
-
-1. Go to the [Actions tab](https://github.com/rdar-lab/easyNetVisibility/actions)
-2. Select the "Release" workflow
-3. Click "Run workflow"
-4. Enter the version tag (e.g., `v1.0.0`)
-5. Click "Run workflow" to start the build
+| Method | Use Case | Requires Local Clone | Steps Required |
+|--------|----------|---------------------|----------------|
+| **GitHub UI** | Quick releases, no git access needed | ❌ No | 3 clicks |
+| **Command Line** | Automated scripts, CI/CD integration | ✅ Yes | Git commands |
 
 ### Version Tag Types
 
